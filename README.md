@@ -15,10 +15,13 @@ It's a plain static site (`index.html`, `style.css`, `app.js`, `config.js`) with
 ## Setup (about 10 minutes)
 
 1. **Create a Supabase project:** sign up at supabase.com, then choose *New project*. Any name and region is fine.
-2. **Create the messages table and set your teacher passcode:** in your project, open *SQL Editor* → *New query*,
-   paste in all of [`supabase/schema.sql`](supabase/schema.sql), change `'change-me'` near the bottom
-   to a passcode of your own, and click *Run*.
-3. **Connect the site:** open *Project Settings* → *API Keys* and copy the **Project URL** and the
+2. **Create the messages table:** in your project, open *SQL Editor* → *New query*,
+   paste in all of [`supabase/schema.sql`](supabase/schema.sql), and click *Run*.
+   If Supabase asks about Row Level Security, choose *Run and enable RLS*.
+3. **Set your teacher passcode:** in a new query, paste [`supabase/set-passcode.sql`](supabase/set-passcode.sql),
+   replace `YOUR-PASSCODE-HERE` with your passcode, and click *Run*.
+   Then delete that query from the SQL Editor's saved list, because it contains your passcode.
+4. **Connect the site:** open *Project Settings* → *API Keys* and copy the **Project URL** and the
    **Publishable key** (starts with `sb_publishable_`) into `config.js`:
    ```js
    window.FOX_TALES_CONFIG = {
@@ -29,7 +32,7 @@ It's a plain static site (`index.html`, `style.css`, `app.js`, `config.js`) with
    ```
    The publishable key is designed to be public, so it's fine for it to sit in this file.
    **Never** use the *secret* key here. The older "anon" key also works until Supabase retires it.
-4. **Put the four files on any web host:** your own host, GitHub Pages, Netlify and so on.
+5. **Put the four files on any web host:** your own host, GitHub Pages, Netlify and so on.
    There's no build step.
 
 If `config.js` is left blank, the app runs in **demo mode**. Messages are then only shared between tabs
@@ -47,8 +50,7 @@ python3 -m http.server 8000   # then open http://localhost:8000
 - **Clearing a room:** click *Teacher tools* (bottom of the left panel), enter your passcode, then *Clear room*.
   Every message in that room is deleted for everyone, and students' screens empty straight away.
   Your browser remembers the passcode until you click *Lock teacher tools*, so don't unlock on a shared computer.
-- To change the passcode, edit and re-run the last statement in `supabase/schema.sql`.
-  The placeholder `change-me` is always rejected.
+- To change the passcode, run `supabase/set-passcode.sql` again with the new one.
 
 ## Notes
 
