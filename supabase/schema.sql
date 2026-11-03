@@ -51,6 +51,11 @@ create table if not exists private.settings (
   value text not null
 );
 
+-- Belt and braces: the website can never read this table directly.
+-- (The teacher functions below still can, because they run as the table owner.)
+alter table private.settings enable row level security;
+revoke all on private.settings from anon, authenticated;
+
 -- Is this the teacher passcode?
 create or replace function public.is_teacher(passcode text)
 returns boolean
