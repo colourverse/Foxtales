@@ -18,16 +18,17 @@ It's a plain static site (`index.html`, `style.css`, `app.js`, `config.js`) with
 2. **Create the messages table and set your teacher passcode:** in your project, open *SQL Editor* → *New query*,
    paste in all of [`supabase/schema.sql`](supabase/schema.sql), change `'change-me'` near the bottom
    to a passcode of your own, and click *Run*.
-3. **Connect the site:** open *Project Settings* → *API* and copy the **Project URL** and the
-   **anon public** key into `config.js`:
+3. **Connect the site:** open *Project Settings* → *API Keys* and copy the **Project URL** and the
+   **Publishable key** (starts with `sb_publishable_`) into `config.js`:
    ```js
    window.FOX_TALES_CONFIG = {
      supabaseUrl: "https://xxxx.supabase.co",
-     supabaseAnonKey: "eyJ...",
+     supabaseAnonKey: "sb_publishable_...",
      appName: "Fox Tales",
    };
    ```
-   The anon key is designed to be public, so it's fine for it to sit in this file.
+   The publishable key is designed to be public, so it's fine for it to sit in this file.
+   **Never** use the *secret* key here. The older "anon" key also works until Supabase retires it.
 4. **Put the four files on any web host:** your own host, GitHub Pages, Netlify and so on.
    There's no build step.
 
