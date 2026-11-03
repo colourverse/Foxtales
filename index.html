@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fox Tales</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦊</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo" aria-hidden="true">🦊</span> <span class="app-name">Fox Tales</span></div>
+    <div class="room-label" id="roomLabel" hidden></div>
+  </header>
+
+  <div class="banner" id="demoBanner" hidden>
+    Demo mode: messages are only shared between tabs on this computer. Add your Supabase details to <code>config.js</code> to go live.
+  </div>
+
+  <!-- Teacher: create a room link -->
+  <main class="screen" id="screenCreate" hidden>
+    <div class="card">
+      <h1>Start a room</h1>
+      <p>Type a name for your class or session. You'll get a link to share with your students.</p>
+      <form id="createForm">
+        <label for="roomInput">Room name</label>
+        <input id="roomInput" maxlength="48" placeholder="e.g. Tuesday Writers" autocomplete="off" required>
+        <button type="submit" class="primary">Make link</button>
+      </form>
+      <div id="linkBox" class="link-box" hidden>
+        <p>Share this link with everyone (paste it into Zoom chat, email, or put it on screen):</p>
+        <div class="link-row">
+          <input id="linkOutput" readonly>
+          <button type="button" id="copyLink" class="primary">Copy</button>
+        </div>
+        <p><a id="openRoom" href="#">Go to the room →</a></p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Student: enter your name -->
+  <main class="screen" id="screenName" hidden>
+    <div class="card">
+      <h1>Welcome!</h1>
+      <p>You're joining <strong id="joinRoomName"></strong>.</p>
+      <form id="nameForm">
+        <label for="nameInput">What's your name?</label>
+        <input id="nameInput" maxlength="40" placeholder="Your name" autocomplete="name" required>
+        <button type="submit" class="primary">Join the chat</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Chat -->
+  <main class="screen chat" id="screenChat" hidden>
+    <aside class="people" id="people" aria-label="Who's here">
+      <h2>Here now <span id="peopleCount"></span></h2>
+      <ul id="peopleList"></ul>
+      <button type="button" class="link-button" id="changeName">Change my name</button>
+
+      <div class="teacher" id="teacherTools">
+        <div id="teacherLocked">
+          <button type="button" class="link-button subtle" id="teacherOpen">Teacher tools</button>
+          <form id="teacherForm" hidden>
+            <label for="teacherPass">Teacher passcode</label>
+            <input id="teacherPass" type="password" autocomplete="current-password">
+            <button type="submit" class="primary small">Unlock</button>
+            <p class="error" id="teacherError" hidden></p>
+          </form>
+        </div>
+        <div id="teacherUnlocked" hidden>
+          <h2>Teacher</h2>
+          <button type="button" class="danger" id="clearRoom">Clear room</button>
+          <button type="button" class="link-button subtle" id="teacherLeave">Lock teacher tools</button>
+        </div>
+      </div>
+    </aside>
+    <section class="conversation">
+      <div class="messages" id="messages" aria-live="polite"></div>
+      <div class="status" id="status" hidden></div>
+      <div class="notice" id="notice" role="status" hidden></div>
+      <form class="composer" id="composer">
+        <label for="messageInput" class="visually-hidden">Message</label>
+        <textarea id="messageInput" rows="1" maxlength="2000" placeholder="Type a message…"></textarea>
+        <button type="submit" class="primary" id="sendButton">Send</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
