@@ -4,7 +4,7 @@
 // public, so it is safe to put here. Never use the secret key.
 // Leave them blank to run in demo mode (messages stay on this computer only).
 window.FOX_TALES_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  supabaseUrl: "https://sbepcrzhhdxwrqpvzshz.supabase.co",
+  supabaseAnonKey: "sb_publishable_ln1RZq89-bW9wuEU-QHsMg_O1M0rmRJ",
   appName: "Fox Tales",
 };
