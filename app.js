@@ -60,7 +60,8 @@
   }
 
   // ---------- backends ----------
-  // Each backend provides: loadHistory(), send(name, body), join(handlers), rename(name).
+  // Each backend provides: loadHistory(), send(name, body), join(name, handlers), rename(name),
+  // checkTeacher(passcode) and clearRoom(passcode).
 
   function SupabaseBackend(room) {
     var client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
@@ -88,6 +89,7 @@
         .on("postgres_changes",
           { event: "INSERT", schema: "public", table: "messages", filter: "room=eq." + room },
           function (payload) { h.onMessage(payload.new); })
+        .on("broadcast", { event: "cleared" }, function () { h.onCleared(); })
         .on("presence", { event: "sync" }, function () {
           var state = channel.presenceState(), names = [];
           Object.keys(state).forEach(function (k) {
@@ -108,6 +110,21 @@
     this.rename = function (name) {
       myName = name;
       if (channel) channel.track({ name: name });
+    };
+
+    this.checkTeacher = function (passcode) {
+      return client.rpc("is_teacher", { passcode: passcode }).then(function (res) {
+        if (res.error) throw res.error;
+        return res.data === true;
+      });
+    };
+
+    this.clearRoom = function (passcode) {
+      return client.rpc("clear_room", { room_name: room, passcode: passcode }).then(function (res) {
+        if (res.error) throw res.error;
+        // Tell everyone else in the room to empty their screens.
+        if (channel) channel.send({ type: "broadcast", event: "cleared", payload: {} });
+      });
     };
   }
 
@@ -152,6 +169,7 @@
         if (d.type === "message") h.onMessage(d.msg);
         if (d.type === "here") { var isNew = !peers[d.id]; peers[d.id] = { name: d.name, seen: Date.now() }; if (isNew) announce(); reportPeople(); }
         if (d.type === "bye") { delete peers[d.id]; reportPeople(); }
+        if (d.type === "cleared") h.onCleared();
       };
       window.addEventListener("beforeunload", function () { if (bc) bc.postMessage({ type: "bye", id: me }); });
       announce();
@@ -161,6 +179,15 @@
     };
 
     this.rename = function (name) { myName = name; announce(); reportPeople(); };
+
+    // Demo mode has no real passcode: anything typed unlocks teacher tools.
+    this.checkTeacher = function (passcode) { return Promise.resolve(!!passcode); };
+
+    this.clearRoom = function () {
+      store(key, null);
+      if (bc) bc.postMessage({ type: "cleared" });
+      return Promise.resolve();
+    };
   }
 
   // ---------- screens ----------
@@ -235,6 +262,12 @@
     backend.join(myName, {
       onMessage: addMessage,
       onPresence: showPeople,
+      onCleared: function () {
+        messages = [];
+        render(true);
+        setStatus("");
+        flash("The teacher cleared the room.");
+      },
       onConnection: function (ok) {
         if (ok) {
           setStatus("");
@@ -248,6 +281,7 @@
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) refreshHistory(); // e.g. laptop woke from sleep
     });
+    restoreTeacher();
     $("messageInput").focus();
   }
 
@@ -262,7 +296,12 @@
 
   function refreshHistory() {
     backend.loadHistory().then(function (rows) {
-      rows.forEach(addMessageQuiet);
+      // Replace what we have (so cleared messages disappear), but keep anything
+      // that arrived live while the request was in flight.
+      var newest = rows.length ? rows[rows.length - 1].created_at : "";
+      var arrivedSince = messages.filter(function (m) { return m.created_at > newest; });
+      messages = [];
+      rows.concat(arrivedSince).forEach(addMessageQuiet);
       render(true);
     }, function () {
       setStatus("Couldn't load earlier messages. Try refreshing the page.");
@@ -401,6 +440,87 @@
     autosize();
     input.focus();
   });
+
+  // ---------- teacher tools ----------
+
+  var teacherPasscode = "";
+
+  function setTeacherMode(on) {
+    $("teacherLocked").hidden = on;
+    $("teacherUnlocked").hidden = !on;
+    $("teacherForm").hidden = true;
+  }
+
+  function restoreTeacher() {
+    var saved = store("foxtales-teacher");
+    if (!saved) return;
+    backend.checkTeacher(saved).then(function (ok) {
+      if (ok) { teacherPasscode = saved; setTeacherMode(true); }
+      else store("foxtales-teacher", null);
+    }, function () {});
+  }
+
+  $("teacherOpen").addEventListener("click", function () {
+    $("teacherForm").hidden = false;
+    $("teacherError").hidden = true;
+    $("teacherPass").value = "";
+    $("teacherPass").focus();
+  });
+
+  $("teacherForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var pass = $("teacherPass").value;
+    if (!pass || !backend) return;
+    var btn = $("teacherForm").querySelector("button");
+    btn.disabled = true;
+    backend.checkTeacher(pass).then(function (ok) {
+      btn.disabled = false;
+      if (!ok) {
+        $("teacherError").textContent = "That passcode isn't right.";
+        $("teacherError").hidden = false;
+        return;
+      }
+      teacherPasscode = pass;
+      store("foxtales-teacher", pass);
+      setTeacherMode(true);
+    }, function () {
+      btn.disabled = false;
+      $("teacherError").textContent = "Couldn't check the passcode. Is the internet working?";
+      $("teacherError").hidden = false;
+    });
+  });
+
+  $("teacherLeave").addEventListener("click", function () {
+    teacherPasscode = "";
+    store("foxtales-teacher", null);
+    setTeacherMode(false);
+  });
+
+  $("clearRoom").addEventListener("click", function () {
+    var label = prettyRoom(room);
+    if (!window.confirm("Delete all messages in \"" + label + "\" for everyone?\n\nThis can't be undone.")) return;
+    var btn = this;
+    btn.disabled = true;
+    backend.clearRoom(teacherPasscode).then(function () {
+      btn.disabled = false;
+      messages = [];
+      pending = [];
+      render(true);
+      flash("Room cleared.");
+    }, function () {
+      btn.disabled = false;
+      flash("Couldn't clear the room. Please try again.");
+    });
+  });
+
+  var flashTimer = null;
+  function flash(text) {
+    var el = $("notice");
+    el.textContent = text;
+    el.hidden = false;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () { el.hidden = true; }, 4000);
+  }
 
   // ---------- start ----------
 

@@ -131,6 +131,23 @@ form > button.primary { margin-top: 14px; width: 100%; }
 .bubble a { color: var(--brand-dark); }
 .day { align-self: center; font-size: 13px; color: var(--muted); background: var(--border); padding: 2px 10px; border-radius: 99px; }
 
+.teacher { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--border); }
+.teacher h2 { margin-bottom: 8px; }
+.teacher form { margin-top: 10px; }
+.teacher label { font-size: 15px; }
+.teacher input { padding: 8px 10px; font-size: 16px; }
+.teacher button.primary.small { margin-top: 8px; width: 100%; padding: 8px 14px; font-size: 16px; }
+.link-button.subtle { color: var(--muted); font-size: 14px; }
+.error { color: #b3261e; font-size: 14px; margin: 6px 0 0; }
+button.danger {
+  display: block; width: 100%; margin-bottom: 10px;
+  background: #fff; color: #b3261e; border: 2px solid #b3261e;
+  border-radius: 10px; padding: 10px 14px; font-weight: 700;
+}
+button.danger:hover { background: #b3261e; color: #fff; }
+button.danger:disabled { opacity: .5; }
+.notice { padding: 6px 20px; font-size: 15px; background: var(--brand-soft); color: var(--brand-dark); text-align: center; }
+
 .status { padding: 6px 20px; font-size: 15px; background: #ffe9e6; color: #8a1f11; }
 
 .composer { display: flex; gap: 10px; padding: 12px 20px 16px; border-top: 1px solid var(--border); background: var(--surface); }
@@ -144,6 +161,8 @@ form > button.primary { margin-top: 14px; width: 100%; }
   .chat { flex-direction: column; }
   .people { width: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 8px 16px; max-height: 140px; }
   .people ul { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-bottom: 4px; }
+  .teacher { margin-top: 8px; padding-top: 8px; }
+  .teacher button.danger { display: inline-block; width: auto; margin: 0 12px 0 0; padding: 6px 12px; }
   .messages { padding: 14px 16px; }
   .composer { padding: 10px 16px 12px; }
   .topbar { padding: 8px 16px; }

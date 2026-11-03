@@ -15,8 +15,9 @@ It's a plain static site (`index.html`, `style.css`, `app.js`, `config.js`) with
 ## Setup (about 10 minutes)
 
 1. **Create a Supabase project:** sign up at supabase.com, then choose *New project*. Any name and region is fine.
-2. **Create the messages table:** in your project, open *SQL Editor* → *New query*, paste in all of
-   [`supabase/schema.sql`](supabase/schema.sql), and click *Run*.
+2. **Create the messages table and set your teacher passcode:** in your project, open *SQL Editor* → *New query*,
+   paste in all of [`supabase/schema.sql`](supabase/schema.sql), change `'change-me'` near the bottom
+   to a passcode of your own, and click *Run*.
 3. **Connect the site:** open *Project Settings* → *API* and copy the **Project URL** and the
    **anon public** key into `config.js`:
    ```js
@@ -42,11 +43,16 @@ python3 -m http.server 8000   # then open http://localhost:8000
 - Make the link before the session and paste it into the Zoom chat, an email, or on the board.
   Links look like `https://your-site/?room=tuesday-writers`.
 - Reusing the same room name next week brings back the earlier conversation.
-- To clear a room, run this in the Supabase SQL Editor:
-  `delete from public.messages where room = 'tuesday-writers';`
+- **Clearing a room:** click *Teacher tools* (bottom of the left panel), enter your passcode, then *Clear room*.
+  Every message in that room is deleted for everyone, and students' screens empty straight away.
+  Your browser remembers the passcode until you click *Lock teacher tools*, so don't unlock on a shared computer.
+- To change the passcode, edit and re-run the last statement in `supabase/schema.sql`.
+  The placeholder `change-me` is always rejected.
 
 ## Notes
 
-- Anyone with a room's link can read and post in it. Nobody can edit or delete messages through the site.
+- Anyone with a room's link can read and post in it. Only someone with the teacher passcode can clear a room.
+  The check happens in the database, so hiding or showing the button doesn't matter for security.
+- In demo mode, any passcode unlocks the teacher tools.
 - Each room shows its latest 300 messages.
 - Brand colours are CSS variables at the top of `style.css`. The app name comes from `config.js`.
