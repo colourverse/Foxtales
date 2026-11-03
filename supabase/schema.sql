@@ -51,6 +51,11 @@ create table if not exists private.settings (
   value text not null
 );
 
+-- Belt and braces: the website can never read this table directly.
+-- (The teacher functions below still can, because they run as the table owner.)
+alter table private.settings enable row level security;
+revoke all on private.settings from anon, authenticated;
+
 -- Is this the teacher passcode?
 create or replace function public.is_teacher(passcode text)
 returns boolean
@@ -63,7 +68,6 @@ begin
   select value into stored from private.settings where key = 'teacher_passcode';
   return stored is not null
      and passcode is not null
-     and passcode <> 'change-me'          -- the placeholder never works
      and extensions.crypt(passcode, stored) = stored;
 end $$;
 
@@ -89,8 +93,5 @@ revoke all on function public.clear_room(text, text) from public;
 grant execute on function public.is_teacher(text) to anon, authenticated;
 grant execute on function public.clear_room(text, text) to anon, authenticated;
 
--- SET YOUR TEACHER PASSCODE: change 'change-me' below, then run this file.
--- (Run just this statement again any time you want a new passcode.)
-insert into private.settings (key, value)
-values ('teacher_passcode', extensions.crypt('change-me', extensions.gen_salt('bf')))
-on conflict (key) do update set value = excluded.value;
+-- No passcode is set here. To set one, run supabase/set-passcode.sql.
+-- Until then, teacher tools stay locked.
