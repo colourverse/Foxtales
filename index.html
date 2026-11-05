@@ -53,14 +53,38 @@
         </div>
       </div>
     </div>
+    <p class="home-footer"><a href="./?manage">Teachers: manage rooms</a></p>
+  </main>
+
+  <!-- Teacher: manage rooms -->
+  <main class="screen" id="screenManage" hidden>
+    <div class="card wide">
+      <h1>Manage rooms</h1>
+      <div id="manageLocked">
+        <p>Enter the teacher passcode to see and delete rooms.</p>
+        <form id="manageForm">
+          <label for="managePass">Teacher passcode</label>
+          <input id="managePass" type="password" autocomplete="current-password">
+          <button type="submit" class="primary">Unlock</button>
+          <p class="error" id="manageError" hidden></p>
+        </form>
+      </div>
+      <div id="manageUnlocked" hidden>
+        <p>Click a room's name to open it. Deleting a room removes all its messages.</p>
+        <ul class="room-list" id="roomList"></ul>
+        <p class="room-list-status" id="roomListStatus" hidden></p>
+        <button type="button" class="link-button subtle" id="manageLock">Lock teacher tools</button>
+      </div>
+      <p class="manage-back"><a href="./">← Back to home</a></p>
+    </div>
   </main>
 
   <!-- Room not found -->
   <main class="screen" id="screenNotFound" hidden>
     <div class="card">
-      <h1>Room not found</h1>
-      <p>We couldn't find a room called <strong id="notFoundName"></strong>.</p>
-      <p>Check the spelling with your teacher and try again. If you're starting a new room, you can create it now.</p>
+      <h1 id="notFoundTitle">Room not found</h1>
+      <p id="notFoundLead">We couldn't find a room called <strong id="notFoundName"></strong>.</p>
+      <p id="notFoundHelp">Check the spelling with your teacher and try again. If you're starting a new room, you can create it now.</p>
       <div class="button-stack">
         <a class="button primary" id="notFoundRetry" href="./">Try again</a>
         <button type="button" class="primary secondary" id="notFoundCreate">Create this room</button>
@@ -102,6 +126,7 @@
         <div id="teacherUnlocked" hidden>
           <h2>Teacher</h2>
           <button type="button" class="danger" id="clearRoom">Clear room</button>
+          <a class="manage-link" href="./?manage">Manage all rooms</a>
           <button type="button" class="link-button subtle" id="teacherLeave">Lock teacher tools</button>
         </div>
       </div>

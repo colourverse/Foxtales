@@ -99,6 +99,41 @@
         });
       });
     };
+
+    this.checkTeacher = function (passcode) {
+      return getClient().rpc("is_teacher", { passcode: passcode }).then(function (res) {
+        if (res.error) throw res.error;
+        return res.data === true;
+      });
+    };
+
+    // Teacher only: every room with message_count and last_message_at.
+    this.list = function (passcode) {
+      return getClient().rpc("list_rooms", { passcode: passcode }).then(function (res) {
+        if (res.error) throw res.error;
+        return res.data || [];
+      });
+    };
+
+    // Teacher only: delete a room and its messages, and tell anyone inside it.
+    this.remove = function (slug, passcode) {
+      var client = getClient();
+      return client.rpc("delete_room", { room_slug: slug, passcode: passcode }).then(function (res) {
+        if (res.error) throw res.error;
+        return new Promise(function (resolve) {
+          var ch = client.channel("room:" + slug);
+          var finish = function () { client.removeChannel(ch); resolve(); };
+          var timer = setTimeout(finish, 4000);
+          ch.subscribe(function (status) {
+            if (status === "SUBSCRIBED") {
+              ch.send({ type: "broadcast", event: "deleted", payload: {} }).then(function () {
+                clearTimeout(timer); finish();
+              }, function () { clearTimeout(timer); finish(); });
+            }
+          });
+        });
+      });
+    };
   }
 
   function LocalRooms() {
@@ -115,6 +150,39 @@
         var all = read(); all[slug] = title; store(key, JSON.stringify(all));
         return { existed: false };
       });
+    };
+
+    // Demo mode has no real passcode: anything typed unlocks teacher tools.
+    this.checkTeacher = function (passcode) { return Promise.resolve(!!passcode); };
+
+    this.list = function () {
+      var all = read(), out = {}, i, k;
+      Object.keys(all).forEach(function (slug) {
+        out[slug] = { slug: slug, title: all[slug], created_at: null, message_count: 0, last_message_at: null };
+      });
+      try {
+        for (i = 0; i < localStorage.length; i++) {
+          k = localStorage.key(i);
+          if (k.indexOf("foxtales-demo:") !== 0) continue;
+          var slug = k.slice("foxtales-demo:".length);
+          var msgs = JSON.parse(localStorage.getItem(k) || "[]");
+          out[slug] = out[slug] || { slug: slug, title: prettyRoom(slug), created_at: null, message_count: 0, last_message_at: null };
+          out[slug].message_count = msgs.length;
+          out[slug].last_message_at = msgs.length ? msgs[msgs.length - 1].created_at : null;
+        }
+      } catch (e) {}
+      return Promise.resolve(Object.keys(out).map(function (k) { return out[k]; }));
+    };
+
+    this.remove = function (slug) {
+      var all = read(); delete all[slug]; store(key, JSON.stringify(all));
+      store("foxtales-demo:" + slug, null);
+      if ("BroadcastChannel" in window) {
+        var bc = new BroadcastChannel("foxtales-demo:" + slug);
+        bc.postMessage({ type: "deleted" });
+        bc.close();
+      }
+      return Promise.resolve();
     };
   }
 
@@ -145,6 +213,7 @@
           { event: "INSERT", schema: "public", table: "messages", filter: "room=eq." + room },
           function (payload) { h.onMessage(payload.new); })
         .on("broadcast", { event: "cleared" }, function () { h.onCleared(); })
+        .on("broadcast", { event: "deleted" }, function () { h.onDeleted(); })
         .on("presence", { event: "sync" }, function () {
           var state = channel.presenceState(), names = [];
           Object.keys(state).forEach(function (k) {
@@ -225,6 +294,7 @@
         if (d.type === "here") { var isNew = !peers[d.id]; peers[d.id] = { name: d.name, seen: Date.now() }; if (isNew) announce(); reportPeople(); }
         if (d.type === "bye") { delete peers[d.id]; reportPeople(); }
         if (d.type === "cleared") h.onCleared();
+        if (d.type === "deleted") h.onDeleted();
       };
       window.addEventListener("beforeunload", function () { if (bc) bc.postMessage({ type: "bye", id: me }); });
       announce();
@@ -257,7 +327,7 @@
   if (!useSupabase) $("demoBanner").hidden = false;
 
   function show(id) {
-    ["screenHome", "screenNotFound", "screenName", "screenChat"].forEach(function (s) { $(s).hidden = s !== id; });
+    ["screenHome", "screenNotFound", "screenName", "screenChat", "screenManage"].forEach(function (s) { $(s).hidden = s !== id; });
   }
 
   function setUpHomeScreen() {
@@ -323,6 +393,15 @@
     });
   }
 
+  function showRoomClosed() {
+    showNotFound(room, roomTitle);
+    $("notFoundTitle").textContent = "Room closed";
+    $("notFoundLead").textContent = "Your teacher has closed " + roomTitle + ".";
+    $("notFoundHelp").textContent = "Ask your teacher which room to join next.";
+    $("notFoundCreate").hidden = true;
+    $("roomLabel").hidden = true;
+  }
+
   function showNotFound(slug, typed) {
     show("screenNotFound");
     $("notFoundName").textContent = typed || prettyRoom(slug);
@@ -384,6 +463,7 @@
     backend.join(myName, {
       onMessage: addMessage,
       onPresence: showPeople,
+      onDeleted: showRoomClosed,
       onCleared: function () {
         messages = [];
         render(true);
@@ -644,9 +724,121 @@
     flashTimer = setTimeout(function () { el.hidden = true; }, 4000);
   }
 
+  // ---------- manage rooms (teacher) ----------
+
+  var dateFmt = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+  function setUpManageScreen() {
+    show("screenManage");
+    document.title = "Manage rooms · " + (config.appName || "Fox Tales");
+    var saved = store("foxtales-teacher");
+    if (saved) {
+      rooms.checkTeacher(saved).then(function (ok) {
+        if (ok) loadRoomList(saved); else { store("foxtales-teacher", null); showManageLock(); }
+      }, function () { showManageLock("Couldn't check the passcode. Is the internet working?"); });
+    } else {
+      showManageLock();
+    }
+
+    $("manageForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var pass = $("managePass").value;
+      if (!pass) return;
+      var btn = $("manageForm").querySelector("button");
+      btn.disabled = true;
+      rooms.checkTeacher(pass).then(function (ok) {
+        btn.disabled = false;
+        if (!ok) { showManageLock("That passcode isn't right."); return; }
+        store("foxtales-teacher", pass);
+        loadRoomList(pass);
+      }, function () {
+        btn.disabled = false;
+        showManageLock("Couldn't check the passcode. Is the internet working?");
+      });
+    });
+
+    $("manageLock").addEventListener("click", function () {
+      store("foxtales-teacher", null);
+      showManageLock();
+    });
+  }
+
+  function showManageLock(error) {
+    $("manageLocked").hidden = false;
+    $("manageUnlocked").hidden = true;
+    $("manageError").textContent = error || "";
+    $("manageError").hidden = !error;
+    $("managePass").value = "";
+    $("managePass").focus();
+  }
+
+  function loadRoomList(pass) {
+    $("manageLocked").hidden = true;
+    $("manageUnlocked").hidden = false;
+    var list = $("roomList");
+    list.textContent = "";
+    $("roomListStatus").textContent = "Loading rooms…";
+    $("roomListStatus").hidden = false;
+    rooms.list(pass).then(function (rows) {
+      rows.sort(function (a, b) {
+        return String(b.last_message_at || b.created_at || "").localeCompare(String(a.last_message_at || a.created_at || ""));
+      });
+      $("roomListStatus").hidden = !!rows.length;
+      $("roomListStatus").textContent = "There are no rooms yet. Make one from the home page.";
+      rows.forEach(function (r) { list.appendChild(roomRow(r, pass)); });
+    }, function () {
+      $("roomListStatus").textContent = "Couldn't load the rooms. Please refresh the page to try again.";
+    });
+  }
+
+  function roomRow(r, pass) {
+    var li = document.createElement("li");
+    var info = document.createElement("div");
+    info.className = "room-info";
+    var a = document.createElement("a");
+    a.href = roomLink(r.slug);
+    a.textContent = r.title || prettyRoom(r.slug);
+    var meta = document.createElement("div");
+    meta.className = "room-meta";
+    var count = Number(r.message_count) || 0;
+    var parts = [count === 0 ? "No messages" : count === 1 ? "1 message" : count + " messages"];
+    if (r.last_message_at) parts.push("last used " + dateFmt.format(new Date(r.last_message_at)));
+    else if (r.created_at) parts.push("made " + dateFmt.format(new Date(r.created_at)));
+    meta.textContent = parts.join(" · ");
+    info.appendChild(a);
+    info.appendChild(meta);
+    var del = document.createElement("button");
+    del.type = "button";
+    del.className = "danger small";
+    del.textContent = "Delete";
+    del.setAttribute("aria-label", "Delete " + a.textContent);
+    del.addEventListener("click", function () {
+      var what = count === 0 ? "" : count === 1 ? " and its 1 message" : " and all " + count + " messages";
+      if (!window.confirm("Delete \"" + a.textContent + "\"" + what + "?\n\nAnyone in the room will be told it's closed. This can't be undone.")) return;
+      del.disabled = true;
+      del.textContent = "Deleting…";
+      rooms.remove(r.slug, pass).then(function () {
+        li.remove();
+        if (!$("roomList").children.length) {
+          $("roomListStatus").textContent = "There are no rooms yet. Make one from the home page.";
+          $("roomListStatus").hidden = false;
+        }
+      }, function () {
+        del.disabled = false;
+        del.textContent = "Delete";
+        window.alert("Couldn't delete the room. Please try again.");
+      });
+    });
+    li.appendChild(info);
+    li.appendChild(del);
+    return li;
+  }
+
   // ---------- start ----------
 
-  if (!room) {
+  if (!room && params.has("manage")) {
+    setUpManageScreen();
+  } else if (!room) {
     setUpHomeScreen();
   } else {
     rooms.find(room).then(function (found) {
