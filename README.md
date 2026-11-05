@@ -54,10 +54,14 @@ python3 -m http.server 8000   # then open http://localhost:8000
 - **Clearing a room:** click *Teacher tools* (bottom of the left panel), enter your passcode, then *Clear room*.
   Every message in that room is deleted for everyone, and students' screens empty straight away.
   Your browser remembers the passcode until you click *Lock teacher tools*, so don't unlock on a shared computer.
+- **Managing rooms:** click *Teachers: manage rooms* at the bottom of the home page (or *Manage all rooms*
+  in a room's teacher tools) and enter your passcode. You'll see every room with its message count and
+  when it was last used. *Delete* removes a room and all its messages; anyone inside it is told the room is closed.
 - To change the passcode, run `supabase/set-passcode.sql` again with the new one.
-- **Upgrading from an earlier version?** If your database was set up before the room list existed,
-  run [`supabase/rooms.sql`](supabase/rooms.sql) once in the SQL Editor. It also adds any rooms that
-  already have messages, so they keep working.
+- **Upgrading from an earlier version?** Run whichever of these your database doesn't have yet, in the SQL Editor:
+  [`supabase/rooms.sql`](supabase/rooms.sql) (room list, so "Room not found" works) and
+  [`supabase/manage-rooms.sql`](supabase/manage-rooms.sql) (the teacher's Manage rooms page).
+  Both are safe to run more than once.
 
 ## Notes
 

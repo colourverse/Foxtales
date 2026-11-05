@@ -56,6 +56,20 @@ label.spaced { margin-top: 14px; }
 a.button { display: block; text-align: center; text-decoration: none; }
 .button-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .button-stack > * { width: 100%; }
+.screen#screenHome { flex-direction: column; align-items: center; justify-content: flex-start; }
+.home-footer { margin: 28px 0 0; font-size: 15px; }
+.home-footer a, .manage-back a, .manage-link { color: var(--muted); }
+.manage-link { display: block; font-size: 15px; margin-bottom: 10px; }
+.card.wide { max-width: 720px; }
+.manage-back { margin: 20px 0 0 !important; font-size: 15px; }
+.room-list { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--border); }
+.room-list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.room-info { flex: 1; min-width: 0; }
+.room-info a { color: var(--text); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.room-info a:hover { color: var(--brand-dark); text-decoration: underline; }
+.room-meta { font-size: 14px; color: var(--muted); }
+.room-list-status { color: var(--muted); }
+button.danger.small { display: inline-block; width: auto; margin: 0; padding: 6px 14px; font-size: 15px; flex-shrink: 0; }
 .existed { background: var(--brand-soft); color: var(--brand-dark) !important; padding: 8px 12px; border-radius: 8px; }
 button.primary.secondary { background: #fff; color: var(--brand-dark); border: 2px solid var(--brand); }
 button.primary.secondary:hover { background: var(--brand-soft); }
