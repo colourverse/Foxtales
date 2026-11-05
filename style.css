@@ -36,7 +36,7 @@ body {
   background: var(--brand);
   color: #fff;
 }
-.brand { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.brand { color: inherit; text-decoration: none; font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
 .logo { font-size: 28px; }
 .room-label { font-weight: 600; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -49,6 +49,12 @@ body {
 
 .screen { flex: 1; min-height: 0; }
 .screen:not(.chat) { display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; }
+
+.home { width: 100%; max-width: 960px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.home .card { max-width: none; }
+label.spaced { margin-top: 14px; }
+button.primary.secondary { background: #fff; color: var(--brand-dark); border: 2px solid var(--brand); }
+button.primary.secondary:hover { background: var(--brand-soft); }
 
 .card {
   width: 100%;
@@ -155,6 +161,11 @@ button.danger:disabled { opacity: .5; }
 .composer > button.primary { align-self: flex-end; width: auto; margin-top: 0; flex-shrink: 0; }
 
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (max-width: 760px) {
+  .home { grid-template-columns: 1fr; gap: 16px; }
+  .screen:not(.chat) { padding: 20px 16px; }
+}
 
 @media (max-width: 700px) {
   body { font-size: 17px; }

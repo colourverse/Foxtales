@@ -200,17 +200,32 @@
   if (!useSupabase) $("demoBanner").hidden = false;
 
   function show(id) {
-    ["screenCreate", "screenName", "screenChat"].forEach(function (s) { $(s).hidden = s !== id; });
+    ["screenHome", "screenName", "screenChat"].forEach(function (s) { $(s).hidden = s !== id; });
   }
 
-  function setUpCreateScreen() {
-    show("screenCreate");
-    $("roomInput").focus();
+  function setUpHomeScreen() {
+    show("screenHome");
+    var siteAddress = window.location.host + window.location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
+    document.querySelectorAll(".site-address").forEach(function (el) { el.textContent = siteAddress; });
+    $("joinNameInput").value = store("foxtales-name") || "";
+    $("joinRoomInput").focus();
+
+    $("joinForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var slug = slugify($("joinRoomInput").value);
+      var name = $("joinNameInput").value.replace(/\s+/g, " ").trim().slice(0, 40);
+      if (!slug) { $("joinRoomInput").value = ""; $("joinRoomInput").focus(); return; }
+      if (!name) { $("joinNameInput").value = ""; $("joinNameInput").focus(); return; }
+      store("foxtales-name", name);
+      window.location.href = roomLink(slug);
+    });
+
     $("createForm").addEventListener("submit", function (e) {
       e.preventDefault();
       var slug = slugify($("roomInput").value);
       if (!slug) { $("roomInput").value = ""; $("roomInput").focus(); return; }
       var link = roomLink(slug);
+      $("createdRoomName").textContent = prettyRoom(slug);
       $("linkOutput").value = link;
       $("openRoom").href = link;
       $("linkBox").hidden = false;
@@ -356,7 +371,11 @@
     if (!all.length) {
       var empty = document.createElement("div");
       empty.className = "empty";
-      empty.textContent = "No messages yet. Say hello! 👋";
+      empty.textContent = "No messages in " + prettyRoom(room) + " yet. Say hello! 👋";
+      var hint = document.createElement("small");
+      hint.textContent = "Expecting other people here? Check the room name with your teacher.";
+      empty.appendChild(document.createElement("br"));
+      empty.appendChild(hint);
       box.appendChild(empty);
       return;
     }
@@ -525,7 +544,7 @@
   // ---------- start ----------
 
   if (!room) {
-    setUpCreateScreen();
+    setUpHomeScreen();
   } else {
     var title = prettyRoom(room);
     document.title = title + " · " + (config.appName || "Fox Tales");
