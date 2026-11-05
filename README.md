@@ -46,6 +46,14 @@ in the same browser, which is handy for trying it out locally:
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
+## Automatic deploys
+
+`.github/workflows/deploy.yml` uploads the site to the web host over FTPS every time `main` changes,
+so merged pull requests go live by themselves. It needs three repository secrets
+(*Settings → Secrets and variables → Actions*): `FTP_SERVER`, `FTP_USERNAME` and `FTP_PASSWORD`.
+Use an FTP account whose directory is the site's own folder, so the upload can't touch anything else.
+To re-run it by hand: *Actions → Deploy to foxtales.me → Run workflow*.
+
 ## Using it in class
 
 - Make the link before the session and paste it into the Zoom chat, an email, or on the board.
