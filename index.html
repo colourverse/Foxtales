@@ -39,8 +39,10 @@
           <label for="roomInput">Room name</label>
           <input id="roomInput" maxlength="48" placeholder="e.g. Tuesday Writers" autocomplete="off" required>
           <button type="submit" class="primary secondary">Make room</button>
+          <p class="error" id="createError" hidden></p>
         </form>
         <div id="linkBox" class="link-box" hidden>
+          <p class="existed" id="roomExisted" hidden>This room already exists, so its earlier messages are still there.</p>
           <p>Students can go to <strong class="site-address"></strong> and type the room name <strong id="createdRoomName"></strong></p>
           <p>Or share this direct link (for Zoom chat or email):</p>
           <div class="link-row">
@@ -50,6 +52,20 @@
           <p><a id="openRoom" href="#">Go to the room →</a></p>
         </div>
       </div>
+    </div>
+  </main>
+
+  <!-- Room not found -->
+  <main class="screen" id="screenNotFound" hidden>
+    <div class="card">
+      <h1>Room not found</h1>
+      <p>We couldn't find a room called <strong id="notFoundName"></strong>.</p>
+      <p>Check the spelling with your teacher and try again. If you're starting a new room, you can create it now.</p>
+      <div class="button-stack">
+        <a class="button primary" id="notFoundRetry" href="./">Try again</a>
+        <button type="button" class="primary secondary" id="notFoundCreate">Create this room</button>
+      </div>
+      <p class="error" id="notFoundError" hidden>Couldn't create the room. Please check your internet connection and try again.</p>
     </div>
   </main>
 

@@ -63,8 +63,63 @@
   // Each backend provides: loadHistory(), send(name, body), join(name, handlers), rename(name),
   // checkTeacher(passcode) and clearRoom(passcode).
 
+  var supabaseClient = null;
+  function getClient() {
+    if (!supabaseClient) supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+    return supabaseClient;
+  }
+
+  // ---------- room list ----------
+  // find(slug) resolves to { title } if the room exists, or null if it doesn't.
+  // create(slug, title) resolves to { existed: true/false }.
+
+  function SupabaseRooms() {
+    this.find = function (slug) {
+      var client;
+      try { client = getClient(); } catch (e) { return Promise.resolve({ title: null }); }
+      return client.from("rooms").select("slug, title").eq("slug", slug).maybeSingle().then(function (res) {
+        // If the check itself fails (e.g. the rooms table isn't set up yet), let people in rather than block them.
+        if (res.error) return { title: null };
+        if (res.data) return { title: res.data.title };
+        // Rooms from before the room list existed only show up as messages.
+        return client.from("messages").select("id").eq("room", slug).limit(1).then(function (r) {
+          return !r.error && r.data && r.data.length ? { title: null } : null;
+        });
+      }, function () { return { title: null }; });
+    };
+
+    this.create = function (slug, title) {
+      var self = this;
+      return self.find(slug).then(function (found) {
+        if (found) return { existed: true };
+        return getClient().from("rooms").insert({ slug: slug, title: title }).then(function (res) {
+          if (res.error && res.error.code === "23505") return { existed: true };
+          if (res.error) throw res.error;
+          return { existed: false };
+        });
+      });
+    };
+  }
+
+  function LocalRooms() {
+    var key = "foxtales-demo-rooms";
+    function read() { try { return JSON.parse(store(key) || "{}"); } catch (e) { return {}; } }
+    this.find = function (slug) {
+      var all = read();
+      if (all[slug]) return Promise.resolve({ title: all[slug] });
+      return Promise.resolve(store("foxtales-demo:" + slug) && store("foxtales-demo:" + slug) !== "[]" ? { title: null } : null);
+    };
+    this.create = function (slug, title) {
+      return this.find(slug).then(function (found) {
+        if (found) return { existed: true };
+        var all = read(); all[slug] = title; store(key, JSON.stringify(all));
+        return { existed: false };
+      });
+    };
+  }
+
   function SupabaseBackend(room) {
-    var client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+    var client = getClient();
     var channel = null, myName = "", clientId = randomId();
 
     this.loadHistory = function () {
@@ -195,12 +250,14 @@
   var params = new URLSearchParams(window.location.search);
   var room = slugify(params.get("room") || "");
   var useSupabase = !!(config.supabaseUrl && config.supabaseAnonKey);
+  var rooms = useSupabase ? new SupabaseRooms() : new LocalRooms();
+  var roomTitle = prettyRoom(room);
 
   document.querySelectorAll(".app-name").forEach(function (el) { el.textContent = config.appName || "Fox Tales"; });
   if (!useSupabase) $("demoBanner").hidden = false;
 
   function show(id) {
-    ["screenHome", "screenName", "screenChat"].forEach(function (s) { $(s).hidden = s !== id; });
+    ["screenHome", "screenNotFound", "screenName", "screenChat"].forEach(function (s) { $(s).hidden = s !== id; });
   }
 
   function setUpHomeScreen() {
@@ -208,7 +265,13 @@
     var siteAddress = window.location.host + window.location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
     document.querySelectorAll(".site-address").forEach(function (el) { el.textContent = siteAddress; });
     $("joinNameInput").value = store("foxtales-name") || "";
+    var retry = /^#join=(.*)$/.exec(window.location.hash);
+    if (retry) {
+      $("joinRoomInput").value = decodeURIComponent(retry[1]);
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
     $("joinRoomInput").focus();
+    if (retry) $("joinRoomInput").select();
 
     $("joinForm").addEventListener("submit", function (e) {
       e.preventDefault();
@@ -217,19 +280,39 @@
       if (!slug) { $("joinRoomInput").value = ""; $("joinRoomInput").focus(); return; }
       if (!name) { $("joinNameInput").value = ""; $("joinNameInput").focus(); return; }
       store("foxtales-name", name);
-      window.location.href = roomLink(slug);
+      var btn = $("joinForm").querySelector("button");
+      btn.disabled = true;
+      btn.textContent = "Checking…";
+      rooms.find(slug).then(function (found) {
+        btn.disabled = false;
+        btn.textContent = "Join room";
+        if (found) window.location.href = roomLink(slug);
+        else showNotFound(slug, $("joinRoomInput").value.trim());
+      });
     });
 
     $("createForm").addEventListener("submit", function (e) {
       e.preventDefault();
-      var slug = slugify($("roomInput").value);
+      var typed = $("roomInput").value.replace(/\s+/g, " ").trim();
+      var slug = slugify(typed);
       if (!slug) { $("roomInput").value = ""; $("roomInput").focus(); return; }
-      var link = roomLink(slug);
-      $("createdRoomName").textContent = prettyRoom(slug);
-      $("linkOutput").value = link;
-      $("openRoom").href = link;
-      $("linkBox").hidden = false;
-      $("linkOutput").select();
+      var btn = $("createForm").querySelector("button");
+      btn.disabled = true;
+      $("createError").hidden = true;
+      rooms.create(slug, typed.slice(0, 64)).then(function (result) {
+        btn.disabled = false;
+        var link = roomLink(slug);
+        $("createdRoomName").textContent = typed;
+        $("roomExisted").hidden = !result.existed;
+        $("linkOutput").value = link;
+        $("openRoom").href = link;
+        $("linkBox").hidden = false;
+        $("linkOutput").select();
+      }, function () {
+        btn.disabled = false;
+        $("createError").textContent = "Couldn't create the room. Please check your internet connection and try again.";
+        $("createError").hidden = false;
+      });
     });
     $("copyLink").addEventListener("click", function () {
       var btn = this, text = $("linkOutput").value;
@@ -240,10 +323,34 @@
     });
   }
 
+  function showNotFound(slug, typed) {
+    show("screenNotFound");
+    $("notFoundName").textContent = typed || prettyRoom(slug);
+    $("notFoundRetry").href = "./#join=" + encodeURIComponent(typed || prettyRoom(slug));
+    $("notFoundRetry").onclick = function (e) {
+      if (room) return; // came from a direct link: the href reloads the home page
+      e.preventDefault(); // already on the home page: just go back to it
+      show("screenHome");
+      $("joinRoomInput").focus();
+      $("joinRoomInput").select();
+    };
+    $("notFoundCreate").onclick = function () {
+      var btn = this;
+      btn.disabled = true;
+      rooms.create(slug, prettyRoom(slug)).then(function () {
+        window.location.href = roomLink(slug);
+      }, function () {
+        btn.disabled = false;
+        $("notFoundError").hidden = false;
+      });
+    };
+    $("notFoundRetry").focus();
+  }
+
   var nameCallback = null;
   function askName(isChange) {
     show("screenName");
-    $("joinRoomName").textContent = prettyRoom(room);
+    $("joinRoomName").textContent = roomTitle;
     $("nameInput").value = isChange ? (store("foxtales-name") || "") : "";
     $("nameForm").querySelector("button").textContent = isChange ? "Save name" : "Join the chat";
     $("nameInput").focus();
@@ -371,11 +478,7 @@
     if (!all.length) {
       var empty = document.createElement("div");
       empty.className = "empty";
-      empty.textContent = "No messages in " + prettyRoom(room) + " yet. Say hello! 👋";
-      var hint = document.createElement("small");
-      hint.textContent = "Expecting other people here? Check the room name with your teacher.";
-      empty.appendChild(document.createElement("br"));
-      empty.appendChild(hint);
+      empty.textContent = "No messages in " + roomTitle + " yet. Say hello! 👋";
       box.appendChild(empty);
       return;
     }
@@ -516,7 +619,7 @@
   });
 
   $("clearRoom").addEventListener("click", function () {
-    var label = prettyRoom(room);
+    var label = roomTitle;
     if (!window.confirm("Delete all messages in \"" + label + "\" for everyone?\n\nThis can't be undone.")) return;
     var btn = this;
     btn.disabled = true;
@@ -546,11 +649,14 @@
   if (!room) {
     setUpHomeScreen();
   } else {
-    var title = prettyRoom(room);
-    document.title = title + " · " + (config.appName || "Fox Tales");
-    $("roomLabel").textContent = title;
-    $("roomLabel").hidden = false;
-    var savedName = store("foxtales-name");
-    if (savedName) startChat(savedName); else askName(false);
+    rooms.find(room).then(function (found) {
+      if (!found) { showNotFound(room, prettyRoom(room)); return; }
+      if (found.title) roomTitle = found.title;
+      document.title = roomTitle + " · " + (config.appName || "Fox Tales");
+      $("roomLabel").textContent = roomTitle;
+      $("roomLabel").hidden = false;
+      var savedName = store("foxtales-name");
+      if (savedName) startChat(savedName); else askName(false);
+    });
   }
 })();
