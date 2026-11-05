@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="logo" aria-hidden="true">🦊</span> <span class="app-name">Fox Tales</span></div>
+    <a class="brand" href="./" title="Home"><span class="logo" aria-hidden="true">🦊</span> <span class="app-name">Fox Tales</span></a>
     <div class="room-label" id="roomLabel" hidden></div>
   </header>
 
@@ -17,23 +17,38 @@
     Demo mode: messages are only shared between tabs on this computer. Add your Supabase details to <code>config.js</code> to go live.
   </div>
 
-  <!-- Teacher: create a room link -->
-  <main class="screen" id="screenCreate" hidden>
-    <div class="card">
-      <h1>Start a room</h1>
-      <p>Type a name for your class or session. You'll get a link to share with your students.</p>
-      <form id="createForm">
-        <label for="roomInput">Room name</label>
-        <input id="roomInput" maxlength="48" placeholder="e.g. Tuesday Writers" autocomplete="off" required>
-        <button type="submit" class="primary">Make link</button>
-      </form>
-      <div id="linkBox" class="link-box" hidden>
-        <p>Share this link with everyone (paste it into Zoom chat, email, or put it on screen):</p>
-        <div class="link-row">
-          <input id="linkOutput" readonly>
-          <button type="button" id="copyLink" class="primary">Copy</button>
+  <!-- Home: join a room or start one -->
+  <main class="screen" id="screenHome" hidden>
+    <div class="home">
+      <div class="card">
+        <h1>Join a room</h1>
+        <p>Type the room name your teacher gave you.</p>
+        <form id="joinForm">
+          <label for="joinRoomInput">Room name</label>
+          <input id="joinRoomInput" maxlength="48" placeholder="e.g. Tuesday Writers" autocomplete="off" required>
+          <label for="joinNameInput" class="spaced">Your name</label>
+          <input id="joinNameInput" maxlength="40" placeholder="Your name" autocomplete="name" required>
+          <button type="submit" class="primary">Join room</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h1>Start a room</h1>
+        <p>For teachers: pick a room name, then share it with your students.</p>
+        <form id="createForm">
+          <label for="roomInput">Room name</label>
+          <input id="roomInput" maxlength="48" placeholder="e.g. Tuesday Writers" autocomplete="off" required>
+          <button type="submit" class="primary secondary">Make room</button>
+        </form>
+        <div id="linkBox" class="link-box" hidden>
+          <p>Students can go to <strong class="site-address"></strong> and type the room name <strong id="createdRoomName"></strong></p>
+          <p>Or share this direct link (for Zoom chat or email):</p>
+          <div class="link-row">
+            <input id="linkOutput" readonly>
+            <button type="button" id="copyLink" class="primary">Copy</button>
+          </div>
+          <p><a id="openRoom" href="#">Go to the room →</a></p>
         </div>
-        <p><a id="openRoom" href="#">Go to the room →</a></p>
       </div>
     </div>
   </main>

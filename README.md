@@ -3,8 +3,10 @@
 A simple chat room for small teaching groups. Students in the room and on Zoom open one link
 in any browser (Mac, Windows, Chromebook, phone). There's nothing to install and no account to make.
 
-- **The teacher sets the room.** Open the site, type a room name, then copy the link it gives you.
-- **Students** open the link, type their name once, and chat. Their name is remembered next time.
+- **The teacher sets the room.** On the home page, use *Start a room* and type a room name.
+- **Students** go to the home page, type the room name and their own name under *Join a room*, and chat.
+  Or they can open a direct link to the room, which the teacher can paste into Zoom chat or email.
+  Their name is remembered next time.
 - Messages are kept, so anyone who joins late sees what was said earlier.
 - A "Here now" list shows who has the room open.
 - Web addresses in messages become clickable links.
