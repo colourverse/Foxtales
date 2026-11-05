@@ -53,6 +53,10 @@ body {
 .home { width: 100%; max-width: 960px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
 .home .card { max-width: none; }
 label.spaced { margin-top: 14px; }
+a.button { display: block; text-align: center; text-decoration: none; }
+.button-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.button-stack > * { width: 100%; }
+.existed { background: var(--brand-soft); color: var(--brand-dark) !important; padding: 8px 12px; border-radius: 8px; }
 button.primary.secondary { background: #fff; color: var(--brand-dark); border: 2px solid var(--brand); }
 button.primary.secondary:hover { background: var(--brand-soft); }
 
@@ -81,7 +85,7 @@ input, textarea {
 input:focus, textarea:focus { outline: none; border-color: var(--brand); }
 
 button { font: inherit; cursor: pointer; }
-button.primary {
+button.primary, a.button.primary {
   background: var(--brand);
   color: #fff;
   border: none;
@@ -89,7 +93,7 @@ button.primary {
   padding: 12px 22px;
   font-weight: 700;
 }
-button.primary:hover { background: var(--brand-dark); }
+button.primary:hover, a.button.primary:hover { background: var(--brand-dark); }
 button.primary:disabled { opacity: .5; cursor: default; }
 form > button.primary { margin-top: 14px; width: 100%; }
 .link-button { background: none; border: none; color: var(--brand-dark); text-decoration: underline; padding: 0; font-size: 15px; }

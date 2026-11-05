@@ -7,6 +7,8 @@ in any browser (Mac, Windows, Chromebook, phone). There's nothing to install and
 - **Students** go to the home page, type the room name and their own name under *Join a room*, and chat.
   Or they can open a direct link to the room, which the teacher can paste into Zoom chat or email.
   Their name is remembered next time.
+- **Mistyped room names are caught.** If a room doesn't exist, students see "Room not found" with
+  *Try again* (back to the home page with the name filled in) or *Create this room*.
 - Messages are kept, so anyone who joins late sees what was said earlier.
 - A "Here now" list shows who has the room open.
 - Web addresses in messages become clickable links.
@@ -53,6 +55,9 @@ python3 -m http.server 8000   # then open http://localhost:8000
   Every message in that room is deleted for everyone, and students' screens empty straight away.
   Your browser remembers the passcode until you click *Lock teacher tools*, so don't unlock on a shared computer.
 - To change the passcode, run `supabase/set-passcode.sql` again with the new one.
+- **Upgrading from an earlier version?** If your database was set up before the room list existed,
+  run [`supabase/rooms.sql`](supabase/rooms.sql) once in the SQL Editor. It also adds any rooms that
+  already have messages, so they keep working.
 
 ## Notes
 
