@@ -175,8 +175,10 @@ button.danger:disabled { opacity: .5; }
 /* File sharing */
 .bubble.has-file { padding: 6px; }
 .bubble.has-file .text { padding: 4px 8px 2px; }
-.attachment.image { display: block; line-height: 0; }
-.attachment.image img { max-width: min(320px, 100%); max-height: 260px; border-radius: 10px; background: var(--border); }
+.attachment.image { display: block; max-width: min(320px, 100%); color: var(--text); text-decoration: none; }
+.attachment.image img { display: block; max-width: 100%; max-height: 260px; border-radius: 10px; background: var(--border); }
+.attachment.image .file-info { padding: 6px 4px 0; }
+.attachment.image:hover .file-meta { color: var(--brand-dark); }
 .attachment.file {
   display: flex; align-items: center; gap: 10px; min-width: 220px; max-width: 360px;
   padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, .7);

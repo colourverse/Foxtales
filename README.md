@@ -65,8 +65,8 @@ To re-run it by hand: *Actions → Deploy to foxtales.me → Run workflow*.
 - **Sharing files (teacher only):** with teacher tools unlocked, a 📎 button appears next to the message box.
   Click it (or drag files onto the chat) to share up to 10 files at a time, each up to 25 MB. Each file
   becomes its own message; anything typed in the message box is sent as a caption with the first one.
-  Files that are too big or not allowed are skipped, and you're told which. Images show in the chat; PDFs, videos and audio open in the browser;
-  everything else downloads. Allowed: images (PNG, JPG, GIF, WebP, AVIF, SVG), video (MP4, MOV, MPG, AVI, WebM),
+  Files that are too big or not allowed are skipped, and you're told which. Images show a preview in the chat. Clicking any file downloads it
+  under its original name. Allowed: images (PNG, JPG, GIF, WebP, AVIF, SVG), video (MP4, MOV, MPG, AVI, WebM),
   audio (MP3, WAV, M4A), documents (PDF, Word, Excel, PowerPoint, OpenDocument, TXT, RTF, CSV, Markdown),
   design (PSD, AI, INDD, IDML, FIG, EPS), fonts (OTF, TTF, WOFF), web (HTML, CSS, JS, JSON) and ZIP.
   Programs and installers can't be shared. *Clear room* and deleting a room also delete its files.

@@ -678,14 +678,18 @@
   var attachmentCache = {};
   function attachmentFor(m) {
     if (attachmentCache[m.id]) return attachmentCache[m.id];
-    var kind = fileKind(m.file_name), el;
+    var kind = fileKind(m.file_name);
+
+    // Every file downloads under its original name. Stored files have a random prefix so
+    // names never clash; "?download=" makes Supabase send the original name instead.
+    // No new tab: a download leaves the chat page where it is.
+    var el = document.createElement("a");
+    el.className = "attachment " + (kind === "image" ? "image" : "file");
+    el.href = fileUrl(m.file_path, m.file_name);
+    el.setAttribute("download", m.file_name);
+    el.title = "Download " + m.file_name;
+
     if (kind === "image") {
-      el = document.createElement("a");
-      el.className = "attachment image";
-      el.href = fileUrl(m.file_path);
-      el.target = "_blank";
-      el.rel = "noopener noreferrer";
-      el.title = m.file_name;
       var img = document.createElement("img");
       img.src = fileUrl(m.file_path);
       img.alt = m.file_name;
@@ -696,31 +700,26 @@
       });
       el.appendChild(img);
     } else {
-      // PDFs, videos and audio open in the browser; everything else downloads.
-      var opens = kind === "pdf" || ((kind === "video" || kind === "audio") && ["mpg", "mpeg", "avi"].indexOf(extensionOf(m.file_name)) === -1);
-      el = document.createElement("a");
-      el.className = "attachment file";
-      el.href = opens ? fileUrl(m.file_path) : fileUrl(m.file_path, m.file_name);
-      el.target = "_blank";
-      el.rel = "noopener noreferrer";
       var icon = document.createElement("span");
       icon.className = "file-icon";
       icon.setAttribute("aria-hidden", "true");
       icon.textContent = FILE_ICONS[kind] || "📎";
-      var info = document.createElement("span");
-      info.className = "file-info";
-      var name = document.createElement("span");
-      name.className = "file-name";
-      name.textContent = m.file_name;
-      var meta = document.createElement("span");
-      meta.className = "file-meta";
-      meta.textContent = [extensionOf(m.file_name).toUpperCase(), formatBytes(m.file_size), opens ? "Open" : "Download"]
-        .filter(Boolean).join(" · ");
-      info.appendChild(name);
-      info.appendChild(meta);
       el.appendChild(icon);
-      el.appendChild(info);
     }
+
+    var info = document.createElement("span");
+    info.className = "file-info";
+    var name = document.createElement("span");
+    name.className = "file-name";
+    name.textContent = m.file_name;
+    var meta = document.createElement("span");
+    meta.className = "file-meta";
+    meta.textContent = [extensionOf(m.file_name).toUpperCase(), formatBytes(m.file_size), "⬇ Download"]
+      .filter(Boolean).join(" · ");
+    info.appendChild(name);
+    info.appendChild(meta);
+    el.appendChild(info);
+
     attachmentCache[m.id] = el;
     return el;
   }
