@@ -3,6 +3,65 @@
 
   var config = window.FOX_TALES_CONFIG || {};
   var HISTORY_LIMIT = 300;
+
+  // ---------- file sharing (teacher only) ----------
+  // Keep in step with ALLOWED in supabase/functions/files/index.ts.
+  var MAX_FILE_BYTES = 25 * 1024 * 1024;
+  var FILE_KINDS = {
+    image: ["png", "jpg", "jpeg", "gif", "webp", "avif", "svg"],
+    video: ["mp4", "mov", "mpg", "mpeg", "avi", "webm"],
+    audio: ["mp3", "wav", "m4a"],
+    pdf: ["pdf"],
+    doc: ["doc", "docx", "odt", "txt", "rtf", "md"],
+    sheet: ["xls", "xlsx", "ods", "csv"],
+    slides: ["ppt", "pptx", "odp"],
+    design: ["psd", "ai", "indd", "idml", "fig", "eps"],
+    font: ["otf", "ttf", "woff", "woff2"],
+    code: ["html", "htm", "css", "js", "json"],
+    archive: ["zip"],
+  };
+  var FILE_ICONS = { image: "🖼️", video: "🎬", audio: "🎵", pdf: "📕", doc: "📝", sheet: "📊", slides: "📽️",
+    design: "🎨", font: "🔤", code: "💻", archive: "📦" };
+  var ALLOWED_EXTENSIONS = [];
+  Object.keys(FILE_KINDS).forEach(function (k) { ALLOWED_EXTENSIONS = ALLOWED_EXTENSIONS.concat(FILE_KINDS[k]); });
+
+  function extensionOf(name) {
+    var m = /\.([A-Za-z0-9]+)$/.exec(name || "");
+    return m ? m[1].toLowerCase() : "";
+  }
+
+  function fileKind(name) {
+    var ext = extensionOf(name);
+    for (var k in FILE_KINDS) if (FILE_KINDS[k].indexOf(ext) !== -1) return k;
+    return "other";
+  }
+
+  function formatBytes(n) {
+    if (!n && n !== 0) return "";
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return Math.round(n / 1024) + " KB";
+    return (n / 1024 / 1024).toFixed(n < 10 * 1024 * 1024 ? 1 : 0) + " MB";
+  }
+
+  // Files live on Supabase's address, not this site's, so nothing in them can reach this page.
+  function fileUrl(path, downloadName) {
+    var url = config.supabaseUrl.replace(/\/$/, "") + "/storage/v1/object/public/files/" +
+      path.split("/").map(encodeURIComponent).join("/");
+    return downloadName ? url + "?download=" + encodeURIComponent(downloadName) : url;
+  }
+
+  function callFilesFunction(payload) {
+    return fetch(config.supabaseUrl.replace(/\/$/, "") + "/functions/v1/files", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: config.supabaseAnonKey },
+      body: JSON.stringify(payload),
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok) throw new Error(data.error || "Something went wrong (" + res.status + ")");
+        return data;
+      });
+    });
+  }
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- small helpers ----------
@@ -120,6 +179,9 @@
       var client = getClient();
       return client.rpc("delete_room", { room_slug: slug, passcode: passcode }).then(function (res) {
         if (res.error) throw res.error;
+        // Remove the room's files too. If that fails the room is still gone; the files are just left over.
+        return callFilesFunction({ action: "delete-room-files", passcode: passcode, room: slug }).catch(function () {});
+      }).then(function () {
         return new Promise(function (resolve) {
           var ch = client.channel("room:" + slug);
           var finish = function () { client.removeChannel(ch); resolve(); };
@@ -248,6 +310,7 @@
         if (res.error) throw res.error;
         // Tell everyone else in the room to empty their screens.
         if (channel) channel.send({ type: "broadcast", event: "cleared", payload: {} });
+        return callFilesFunction({ action: "delete-room-files", passcode: passcode, room: room }).catch(function () {});
       });
     };
   }
@@ -585,8 +648,14 @@
       meta.appendChild(who);
       meta.appendChild(document.createTextNode(" · " + (m.failed ? "not sent" : m.pending ? "sending…" : timeFmt.format(when))));
       var bubble = document.createElement("div");
-      bubble.className = "bubble";
-      fillWithLinks(bubble, m.body);
+      bubble.className = "bubble" + (m.file_path ? " has-file" : "");
+      if (m.file_path) bubble.appendChild(attachmentFor(m));
+      if (m.body) {
+        var text = document.createElement("div");
+        text.className = "text";
+        fillWithLinks(text, m.body);
+        bubble.appendChild(text);
+      }
       wrap.appendChild(meta);
       wrap.appendChild(bubble);
       if (m.failed) {
@@ -603,6 +672,57 @@
     });
 
     if (forceBottom || nearBottom || mineJustArrived) box.scrollTop = box.scrollHeight;
+  }
+
+  // Built once per message and reused, so images don't reload every time the chat redraws.
+  var attachmentCache = {};
+  function attachmentFor(m) {
+    if (attachmentCache[m.id]) return attachmentCache[m.id];
+    var kind = fileKind(m.file_name), el;
+    if (kind === "image") {
+      el = document.createElement("a");
+      el.className = "attachment image";
+      el.href = fileUrl(m.file_path);
+      el.target = "_blank";
+      el.rel = "noopener noreferrer";
+      el.title = m.file_name;
+      var img = document.createElement("img");
+      img.src = fileUrl(m.file_path);
+      img.alt = m.file_name;
+      img.loading = "lazy";
+      img.addEventListener("load", function () {
+        var box = $("messages");
+        if (box.scrollHeight - box.scrollTop - box.clientHeight < 400) box.scrollTop = box.scrollHeight;
+      });
+      el.appendChild(img);
+    } else {
+      // PDFs, videos and audio open in the browser; everything else downloads.
+      var opens = kind === "pdf" || ((kind === "video" || kind === "audio") && ["mpg", "mpeg", "avi"].indexOf(extensionOf(m.file_name)) === -1);
+      el = document.createElement("a");
+      el.className = "attachment file";
+      el.href = opens ? fileUrl(m.file_path) : fileUrl(m.file_path, m.file_name);
+      el.target = "_blank";
+      el.rel = "noopener noreferrer";
+      var icon = document.createElement("span");
+      icon.className = "file-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = FILE_ICONS[kind] || "📎";
+      var info = document.createElement("span");
+      info.className = "file-info";
+      var name = document.createElement("span");
+      name.className = "file-name";
+      name.textContent = m.file_name;
+      var meta = document.createElement("span");
+      meta.className = "file-meta";
+      meta.textContent = [extensionOf(m.file_name).toUpperCase(), formatBytes(m.file_size), opens ? "Open" : "Download"]
+        .filter(Boolean).join(" · ");
+      info.appendChild(name);
+      info.appendChild(meta);
+      el.appendChild(icon);
+      el.appendChild(info);
+    }
+    attachmentCache[m.id] = el;
+    return el;
   }
 
   function sendMessage(body) {
@@ -648,6 +768,7 @@
   var teacherPasscode = "";
 
   function setTeacherMode(on) {
+    $("attachButton").hidden = !on;
     $("teacherLocked").hidden = on;
     $("teacherUnlocked").hidden = !on;
     $("teacherForm").hidden = true;
@@ -723,6 +844,109 @@
     clearTimeout(flashTimer);
     flashTimer = setTimeout(function () { el.hidden = true; }, 4000);
   }
+
+  // ---------- sending files (teacher) ----------
+
+  $("fileInput").setAttribute("accept", ALLOWED_EXTENSIONS.map(function (e) { return "." + e; }).join(","));
+  $("attachButton").addEventListener("click", function () {
+    if (!useSupabase) { flash("Sharing files needs the live Supabase setup."); return; }
+    $("fileInput").click();
+  });
+  $("fileInput").addEventListener("change", function () {
+    var file = this.files && this.files[0];
+    this.value = "";
+    if (file) sendFile(file);
+  });
+
+  // Drag a file onto the chat (teacher mode only).
+  var conversation = document.querySelector(".conversation");
+  var dragDepth = 0;
+  function dragHasFiles(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") !== -1; }
+  conversation.addEventListener("dragenter", function (e) {
+    if (!teacherPasscode || !dragHasFiles(e)) return;
+    e.preventDefault();
+    dragDepth++;
+    conversation.classList.add("dropping");
+  });
+  conversation.addEventListener("dragover", function (e) {
+    if (teacherPasscode && dragHasFiles(e)) e.preventDefault();
+  });
+  conversation.addEventListener("dragleave", function () {
+    if (dragDepth && --dragDepth === 0) conversation.classList.remove("dropping");
+  });
+  conversation.addEventListener("drop", function (e) {
+    if (!teacherPasscode || !dragHasFiles(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    conversation.classList.remove("dropping");
+    var file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    if (!useSupabase) { flash("Sharing files needs the live Supabase setup."); return; }
+    sendFile(file);
+  });
+
+  var uploading = false;
+  function sendFile(file) {
+    if (uploading) { flash("Please wait for the current file to finish."); return; }
+    if (ALLOWED_EXTENSIONS.indexOf(extensionOf(file.name)) === -1) {
+      flash("Sorry, " + (extensionOf(file.name) ? "." + extensionOf(file.name) + " files" : "files without an extension") + " can't be shared.");
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) { flash("That file is " + formatBytes(file.size) + ". Files must be 25 MB or smaller."); return; }
+    if (file.size === 0) { flash("That file is empty."); return; }
+
+    var caption = input.value.trim().slice(0, 2000);
+    uploading = true;
+    showUpload(file.name, 0);
+    callFilesFunction({ action: "sign", passcode: teacherPasscode, room: room, name: file.name, size: file.size })
+      .then(function (signed) {
+        return putFile(signed.signedUrl, file).then(function () { return signed.path; });
+      })
+      .then(function (path) {
+        showUpload(file.name, 100, "Posting…");
+        return callFilesFunction({ action: "post", passcode: teacherPasscode, room: room, path: path,
+          name: file.name, type: file.type || "", body: caption, sender: myName });
+      })
+      .then(function (result) {
+        uploading = false;
+        hideUpload();
+        if (caption && input.value.trim() === caption) { input.value = ""; autosize(); }
+        if (result.message && addMessageQuiet(result.message)) render(false, true);
+      }, function (err) {
+        uploading = false;
+        hideUpload();
+        flash("Couldn't share " + file.name + ": " + (err && err.message ? err.message : "please try again."));
+      });
+  }
+
+  // Upload straight to storage with progress (the signed URL allows exactly one upload).
+  function putFile(signedUrl, file) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("PUT", signedUrl);
+      xhr.setRequestHeader("apikey", config.supabaseAnonKey);
+      xhr.setRequestHeader("x-upsert", "false");
+      xhr.setRequestHeader("cache-control", "max-age=3600");
+      xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
+      xhr.upload.onprogress = function (e) {
+        if (e.lengthComputable) showUpload(file.name, Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) resolve();
+        else reject(new Error(xhr.status === 413 ? "the file is too big." : "the upload failed (" + xhr.status + ")."));
+      };
+      xhr.onerror = function () { reject(new Error("the upload was interrupted. Is the internet working?")); };
+      xhr.send(file);
+    });
+  }
+
+  function showUpload(name, percent, label) {
+    $("upload").hidden = false;
+    $("uploadName").textContent = name;
+    $("uploadStatus").textContent = label || percent + "%";
+    $("uploadBar").style.width = percent + "%";
+  }
+  function hideUpload() { $("upload").hidden = true; }
 
   // ---------- manage rooms (teacher) ----------
 

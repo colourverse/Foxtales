@@ -62,6 +62,13 @@ To re-run it by hand: *Actions → Deploy to foxtales.me → Run workflow*.
 - **Clearing a room:** click *Teacher tools* (bottom of the left panel), enter your passcode, then *Clear room*.
   Every message in that room is deleted for everyone, and students' screens empty straight away.
   Your browser remembers the passcode until you click *Lock teacher tools*, so don't unlock on a shared computer.
+- **Sharing files (teacher only):** with teacher tools unlocked, a 📎 button appears next to the message box.
+  Click it (or drag a file onto the chat) to share a file up to 25 MB. Anything typed in the message box
+  is sent with it as a caption. Images show in the chat; PDFs, videos and audio open in the browser;
+  everything else downloads. Allowed: images (PNG, JPG, GIF, WebP, AVIF, SVG), video (MP4, MOV, MPG, AVI, WebM),
+  audio (MP3, WAV, M4A), documents (PDF, Word, Excel, PowerPoint, OpenDocument, TXT, RTF, CSV, Markdown),
+  design (PSD, AI, INDD, IDML, FIG, EPS), fonts (OTF, TTF, WOFF), web (HTML, CSS, JS, JSON) and ZIP.
+  Programs and installers can't be shared. *Clear room* and deleting a room also delete its files.
 - **Managing rooms:** click *Teachers: manage rooms* at the bottom of the home page (or *Manage all rooms*
   in a room's teacher tools) and enter your passcode. You'll see every room with its message count and
   when it was last used. *Delete* removes a room and all its messages; anyone inside it is told the room is closed.
@@ -69,7 +76,10 @@ To re-run it by hand: *Actions → Deploy to foxtales.me → Run workflow*.
 - **Upgrading from an earlier version?** Run whichever of these your database doesn't have yet, in the SQL Editor:
   [`supabase/rooms.sql`](supabase/rooms.sql) (room list, so "Room not found" works) and
   [`supabase/manage-rooms.sql`](supabase/manage-rooms.sql) (the teacher's Manage rooms page).
-  Both are safe to run more than once.
+  For file sharing, also run [`supabase/files.sql`](supabase/files.sql) and deploy the Edge Function in
+  [`supabase/functions/files`](supabase/functions/files) as `files`, with **Verify JWT turned off**
+  (it checks the teacher passcode itself).
+  All of these are safe to run more than once.
 
 ## Notes
 
