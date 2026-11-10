@@ -837,12 +837,12 @@
   });
 
   var flashTimer = null;
-  function flash(text) {
+  function flash(text, duration) {
     var el = $("notice");
     el.textContent = text;
     el.hidden = false;
     clearTimeout(flashTimer);
-    flashTimer = setTimeout(function () { el.hidden = true; }, 4000);
+    flashTimer = setTimeout(function () { el.hidden = true; }, duration || 4000);
   }
 
   // ---------- sending files (teacher) ----------
@@ -853,9 +853,9 @@
     $("fileInput").click();
   });
   $("fileInput").addEventListener("change", function () {
-    var file = this.files && this.files[0];
+    var files = Array.prototype.slice.call(this.files || []);
     this.value = "";
-    if (file) sendFile(file);
+    if (files.length) sendFiles(files);
   });
 
   // Drag a file onto the chat (teacher mode only).
@@ -879,48 +879,93 @@
     e.preventDefault();
     dragDepth = 0;
     conversation.classList.remove("dropping");
-    var file = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (!file) return;
+    var files = Array.prototype.slice.call(e.dataTransfer.files || []);
+    if (!files.length) return;
     if (!useSupabase) { flash("Sharing files needs the live Supabase setup."); return; }
-    sendFile(file);
+    sendFiles(files);
   });
 
+  var MAX_FILES_AT_ONCE = 10;
   var uploading = false;
-  function sendFile(file) {
-    if (uploading) { flash("Please wait for the current file to finish."); return; }
-    if (ALLOWED_EXTENSIONS.indexOf(extensionOf(file.name)) === -1) {
-      flash("Sorry, " + (extensionOf(file.name) ? "." + extensionOf(file.name) + " files" : "files without an extension") + " can't be shared.");
+
+  function fileProblem(file) {
+    var ext = extensionOf(file.name);
+    if (ALLOWED_EXTENSIONS.indexOf(ext) === -1) {
+      return ext ? "." + ext + " files can't be shared" : "files without an extension can't be shared";
+    }
+    if (file.size > MAX_FILE_BYTES) return "it's " + formatBytes(file.size) + " and the limit is 25 MB";
+    if (file.size === 0) return "it's empty";
+    return "";
+  }
+
+  // Share several files one after another, each as its own message.
+  // Problem files are skipped and listed at the end; typed text goes with the first file that's shared.
+  function sendFiles(files) {
+    if (uploading) { flash("Please wait for the current upload to finish."); return; }
+    var skipped = [], ok = [];
+    files.forEach(function (f) {
+      var problem = fileProblem(f);
+      if (problem) skipped.push(f.name + " (" + problem + ")"); else ok.push(f);
+    });
+    if (ok.length > MAX_FILES_AT_ONCE) {
+      skipped.push((ok.length - MAX_FILES_AT_ONCE) + " more (you can share up to " + MAX_FILES_AT_ONCE + " files at a time)");
+      ok = ok.slice(0, MAX_FILES_AT_ONCE);
+    }
+    if (!ok.length) {
+      flash("Couldn't share " + skipped.join(", ") + ".", 10000);
       return;
     }
-    if (file.size > MAX_FILE_BYTES) { flash("That file is " + formatBytes(file.size) + ". Files must be 25 MB or smaller."); return; }
-    if (file.size === 0) { flash("That file is empty."); return; }
 
     var caption = input.value.trim().slice(0, 2000);
+    var shared = 0, i = 0;
     uploading = true;
-    showUpload(file.name, 0);
-    callFilesFunction({ action: "sign", passcode: teacherPasscode, room: room, name: file.name, size: file.size })
+
+    function next() {
+      if (i >= ok.length) {
+        uploading = false;
+        hideUpload();
+        if (skipped.length) {
+          flash((shared ? "Shared " + shared + " of " + files.length + " files. " : "") +
+            "Not shared: " + skipped.join(", ") + ".", 12000);
+        }
+        return;
+      }
+      var file = ok[i];
+      var label = ok.length > 1 ? (i + 1) + " of " + ok.length + ": " : "";
+      uploadOne(file, label, caption).then(function (message) {
+        shared++;
+        if (caption) {
+          // The caption went with this file; clear it so it isn't repeated.
+          if (input.value.trim() === caption) { input.value = ""; autosize(); }
+          caption = "";
+        }
+        if (message && addMessageQuiet(message)) render(false, true);
+      }, function (err) {
+        skipped.push(file.name + " (" + (err && err.message ? err.message.replace(/\.$/, "") : "upload failed") + ")");
+      }).then(function () {
+        i++;
+        next();
+      });
+    }
+    next();
+  }
+
+  function uploadOne(file, label, caption) {
+    showUpload(label + file.name, 0);
+    return callFilesFunction({ action: "sign", passcode: teacherPasscode, room: room, name: file.name, size: file.size })
       .then(function (signed) {
-        return putFile(signed.signedUrl, file).then(function () { return signed.path; });
+        return putFile(signed.signedUrl, file, label).then(function () { return signed.path; });
       })
       .then(function (path) {
-        showUpload(file.name, 100, "Posting…");
+        showUpload(label + file.name, 100, "Posting…");
         return callFilesFunction({ action: "post", passcode: teacherPasscode, room: room, path: path,
           name: file.name, type: file.type || "", body: caption, sender: myName });
       })
-      .then(function (result) {
-        uploading = false;
-        hideUpload();
-        if (caption && input.value.trim() === caption) { input.value = ""; autosize(); }
-        if (result.message && addMessageQuiet(result.message)) render(false, true);
-      }, function (err) {
-        uploading = false;
-        hideUpload();
-        flash("Couldn't share " + file.name + ": " + (err && err.message ? err.message : "please try again."));
-      });
+      .then(function (result) { return result.message; });
   }
 
   // Upload straight to storage with progress (the signed URL allows exactly one upload).
-  function putFile(signedUrl, file) {
+  function putFile(signedUrl, file, label) {
     return new Promise(function (resolve, reject) {
       var xhr = new XMLHttpRequest();
       xhr.open("PUT", signedUrl);
@@ -929,7 +974,7 @@
       xhr.setRequestHeader("cache-control", "max-age=3600");
       xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
       xhr.upload.onprogress = function (e) {
-        if (e.lengthComputable) showUpload(file.name, Math.round((e.loaded / e.total) * 100));
+        if (e.lengthComputable) showUpload((label || "") + file.name, Math.round((e.loaded / e.total) * 100));
       };
       xhr.onload = function () {
         if (xhr.status >= 200 && xhr.status < 300) resolve();
