@@ -71,6 +71,9 @@ To re-run it by hand: *Actions → Deploy to foxtales.me → Run workflow*.
   design (PSD, AI, INDD, IDML, FIG, EPS), fonts (OTF, TTF, WOFF), web (HTML, CSS, JS, JSON) and ZIP.
   Programs and installers can't be shared. Files can only be shared in rooms that exist.
   *Clear room* and deleting a room (teacher only) also delete its files.
+- **Teacher's messages stand out:** with teacher tools unlocked, your messages (and files) get a **Teacher**
+  badge and a highlighted bubble. The database checks the passcode before marking a message, so students
+  can't fake it.
 - **Managing rooms:** click *Teachers: manage rooms* at the bottom of the home page (or *Manage all rooms*
   in a room's teacher tools) and enter your passcode. You'll see every room with its message count and
   when it was last used. *Delete* removes a room and all its messages; anyone inside it is told the room is closed.
@@ -78,6 +81,7 @@ To re-run it by hand: *Actions → Deploy to foxtales.me → Run workflow*.
 - **Upgrading from an earlier version?** Run whichever of these your database doesn't have yet, in the SQL Editor:
   [`supabase/rooms.sql`](supabase/rooms.sql) (room list, so "Room not found" works) and
   [`supabase/manage-rooms.sql`](supabase/manage-rooms.sql) (the teacher's Manage rooms page).
+  To mark the teacher's messages, run [`supabase/teacher-messages.sql`](supabase/teacher-messages.sql).
   For file sharing, also run [`supabase/files.sql`](supabase/files.sql) and deploy the Edge Function in
   [`supabase/functions/files`](supabase/functions/files) as `files`, with **Verify JWT turned off**
   (it checks the teacher passcode itself).
