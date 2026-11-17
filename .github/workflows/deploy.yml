@@ -27,6 +27,14 @@ jobs:
       - name: Get the code
         uses: actions/checkout@v4
 
+      # Give the style and code files a new address on every deploy (style.css?v=1a2b3c4),
+      # so browsers (Safari especially) fetch the new versions instead of reusing old copies.
+      - name: Stamp file versions
+        run: |
+          sed -i "s/?v=dev\"/?v=${GITHUB_SHA::7}\"/g" index.html
+          grep -o '?v=[^"]*' index.html | sort -u
+          if grep -q '?v=dev"' index.html; then echo "Version stamp failed"; exit 1; fi
+
       - name: Upload changed files over FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
