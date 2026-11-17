@@ -62,14 +62,15 @@ To re-run it by hand: *Actions → Deploy to foxtales.me → Run workflow*.
 - **Clearing a room:** click *Teacher tools* (bottom of the left panel), enter your passcode, then *Clear room*.
   Every message in that room is deleted for everyone, and students' screens empty straight away.
   Your browser remembers the passcode until you click *Lock teacher tools*, so don't unlock on a shared computer.
-- **Sharing files (teacher only):** with teacher tools unlocked, a 📎 button appears next to the message box.
+- **Sharing files:** everyone in a room (teacher and students) has a 📎 button next to the message box.
   Click it (or drag files onto the chat) to share up to 10 files at a time, each up to 25 MB. Each file
   becomes its own message; anything typed in the message box is sent as a caption with the first one.
   Files that are too big or not allowed are skipped, and you're told which. Images show a preview in the chat. Clicking any file downloads it
   under its original name. Allowed: images (PNG, JPG, GIF, WebP, AVIF, SVG), video (MP4, MOV, MPG, AVI, WebM),
   audio (MP3, WAV, M4A), documents (PDF, Word, Excel, PowerPoint, OpenDocument, TXT, RTF, CSV, Markdown),
   design (PSD, AI, INDD, IDML, FIG, EPS), fonts (OTF, TTF, WOFF), web (HTML, CSS, JS, JSON) and ZIP.
-  Programs and installers can't be shared. *Clear room* and deleting a room also delete its files.
+  Programs and installers can't be shared. Files can only be shared in rooms that exist.
+  *Clear room* and deleting a room (teacher only) also delete its files.
 - **Managing rooms:** click *Teachers: manage rooms* at the bottom of the home page (or *Manage all rooms*
   in a room's teacher tools) and enter your passcode. You'll see every room with its message count and
   when it was last used. *Delete* removes a room and all its messages; anyone inside it is told the room is closed.
