@@ -153,9 +153,14 @@ form > button.primary { margin-top: 14px; width: 100%; }
 /* The teacher's messages (marked by the database, so students can't fake it) */
 .msg.from-teacher .bubble { background: var(--brand-soft); border: 2px solid var(--brand); }
 .msg.from-teacher .who { color: var(--brand-dark); }
+/* Dark orange behind white text for enough contrast (about 5:1), and no pixel nudging,
+   which Safari and Chrome line up differently. */
 .teacher-badge {
-  display: inline-block; padding: 1px 8px; border-radius: 99px; background: var(--brand); color: #fff;
-  font-size: 12px; font-weight: 700; letter-spacing: .02em; vertical-align: 1px;
+  display: inline-block; padding: 2px 9px; border-radius: 99px;
+  background: var(--brand-dark); color: #fff;
+  font-size: 13px; font-weight: 700; line-height: 1.35; letter-spacing: .03em;
+  text-transform: uppercase; vertical-align: middle;
+  -webkit-font-smoothing: antialiased;
 }
 .msg.pending .bubble { opacity: .6; }
 .msg.failed .bubble { border-color: #d33; }
