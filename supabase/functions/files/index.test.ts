@@ -65,6 +65,9 @@ check("student (no passcode) can sign", r.status === 200 && /^tuesday-writers\/[
 const spath = r.data.path; store.set(spath, 10);
 r = await call({ action: "post", room: "tuesday-writers", path: spath, name: "student work.png", type: "image/png", body: "My poster", sender: "Sam" });
 check("student can post", r.status === 200 && r.data.message?.name === "Sam" && r.data.message?.file_path === spath, r);
+check("student file not marked as teacher's", r.data.message?.from_teacher === false, r.data);
+r = await call({ action: "post", passcode: "guess", room: "tuesday-writers", path: spath, name: "student work.png", sender: "Sam" });
+check("wrong passcode still posts, unmarked", r.status === 200 && r.data.message?.from_teacher === false, r.data);
 store.delete(spath);
 r = await call({ action: "sign", room: "made-up-room", name: "a.pdf", size: 10 });
 check("room that doesn't exist refused (404)", r.status === 404, r);
@@ -89,6 +92,7 @@ check("post before upload refused", r.status === 400 && /didn't arrive/.test(r.d
 store.set(path, 1234); // simulate the browser's upload
 r = await call({ action: "post", passcode: "right", room: "tuesday-writers", path, name: "Week 3 – Notes (final).PDF", type: "application/pdf", body: "  Here you go ", sender: "Ms Fox" });
 check("post ok", r.status === 200, r);
+check("teacher's file marked as teacher's", r.data.message?.from_teacher === true, r.data);
 check("message has file fields + real size", r.data.message?.file_path === path && r.data.message?.file_size === 1234 && r.data.message?.body === "Here you go" && r.data.message?.name === "Ms Fox", r.data);
 r = await call({ action: "post", passcode: "right", room: "tuesday-writers", path: "other-room/x.pdf", name: "x.pdf", sender: "Ms Fox" });
 check("post with another room's path refused", r.status === 400, r);

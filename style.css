@@ -150,6 +150,13 @@ form > button.primary { margin-top: 14px; width: 100%; }
   overflow-wrap: anywhere;
 }
 .msg.mine .bubble { background: var(--mine); border-color: transparent; }
+/* The teacher's messages (marked by the database, so students can't fake it) */
+.msg.from-teacher .bubble { background: var(--brand-soft); border: 2px solid var(--brand); }
+.msg.from-teacher .who { color: var(--brand-dark); }
+.teacher-badge {
+  display: inline-block; padding: 1px 8px; border-radius: 99px; background: var(--brand); color: #fff;
+  font-size: 12px; font-weight: 700; letter-spacing: .02em; vertical-align: 1px;
+}
 .msg.pending .bubble { opacity: .6; }
 .msg.failed .bubble { border-color: #d33; }
 .bubble a { color: var(--brand-dark); }

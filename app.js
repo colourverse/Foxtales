@@ -261,7 +261,12 @@
         });
     };
 
-    this.send = function (name, body) {
+    // With the teacher passcode, the database checks it and marks the message as the teacher's.
+    this.send = function (name, body, passcode) {
+      if (passcode) {
+        return client.rpc("post_as_teacher", { room_name: room, sender: name, message: body, passcode: passcode })
+          .then(function (res) { if (res.error) throw res.error; return res.data; });
+      }
       return client.from("messages").insert({ room: room, name: name, body: body })
         .select().single()
         .then(function (res) { if (res.error) throw res.error; return res.data; });
@@ -327,10 +332,10 @@
 
     this.loadHistory = function () { return Promise.resolve(read().slice(-HISTORY_LIMIT)); };
 
-    this.send = function (name, body) {
+    this.send = function (name, body, passcode) {
       var all = read();
       var msg = { id: Date.now() * 1000 + Math.floor(Math.random() * 1000), room: room,
-        name: name, body: body, created_at: new Date().toISOString() };
+        name: name, body: body, created_at: new Date().toISOString(), from_teacher: !!passcode };
       all.push(msg);
       store(key, JSON.stringify(all.slice(-HISTORY_LIMIT)));
       if (bc) bc.postMessage({ type: "message", msg: msg });
@@ -639,14 +644,22 @@
         lastDay = day;
       }
       var wrap = document.createElement("div");
-      wrap.className = "msg" + (m.name === myName ? " mine" : "") + (m.pending ? " pending" : "") + (m.failed ? " failed" : "");
+      wrap.className = "msg" + (m.name === myName ? " mine" : "") + (m.from_teacher ? " from-teacher" : "") +
+        (m.pending ? " pending" : "") + (m.failed ? " failed" : "");
       var meta = document.createElement("div");
       meta.className = "meta";
       var who = document.createElement("span");
       who.className = "who";
       who.textContent = m.name;
-      if (m.name !== myName) who.style.color = nameColour(m.name);
+      if (m.name !== myName && !m.from_teacher) who.style.color = nameColour(m.name);
       meta.appendChild(who);
+      if (m.from_teacher) {
+        var badge = document.createElement("span");
+        badge.className = "teacher-badge";
+        badge.textContent = "Teacher";
+        meta.appendChild(document.createTextNode(" "));
+        meta.appendChild(badge);
+      }
       meta.appendChild(document.createTextNode(" · " + (m.failed ? "not sent" : m.pending ? "sending…" : timeFmt.format(when))));
       var bubble = document.createElement("div");
       bubble.className = "bubble" + (m.file_path ? " has-file" : "");
@@ -726,10 +739,11 @@
   }
 
   function sendMessage(body) {
-    var temp = { id: "tmp-" + randomId(), name: myName, body: body, created_at: new Date().toISOString(), pending: true };
+    var temp = { id: "tmp-" + randomId(), name: myName, body: body, created_at: new Date().toISOString(),
+      pending: true, from_teacher: !!teacherPasscode };
     pending.push(temp);
     render(true);
-    backend.send(myName, body).then(function (row) {
+    backend.send(myName, body, teacherPasscode).then(function (row) {
       var i = pending.indexOf(temp);
       if (i !== -1) pending.splice(i, 1);
       addMessageQuiet(row);
@@ -957,7 +971,7 @@
       })
       .then(function (path) {
         showUpload(label + file.name, 100, "Posting…");
-        return callFilesFunction({ action: "post", room: room, path: path,
+        return callFilesFunction({ action: "post", room: room, path: path, passcode: teacherPasscode || undefined,
           name: file.name, type: file.type || "", body: caption, sender: myName });
       })
       .then(function (result) { return result.message; });

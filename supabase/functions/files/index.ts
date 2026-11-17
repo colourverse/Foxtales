@@ -5,6 +5,7 @@
 // Actions (POST JSON, all need { room }):
 //   sign               { name, size }                     -> { path, signedUrl }   anyone in the room
 //   post               { path, name, type, body, sender } -> { message }           anyone in the room
+//                      (with a valid { passcode } the message is marked as the teacher's)
 //   delete-room-files  { passcode }                       -> { deleted }           teacher only
 
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
@@ -156,9 +157,17 @@ export async function handle(req: Request): Promise<Response> {
     const obj = listed.data?.find((o) => o.name === fileName);
     if (!obj) return json({ error: "The upload didn't arrive. Please try again." }, 400);
 
+    // Mark it as the teacher's only if the passcode checks out.
+    let fromTeacher = false;
+    if (isText(passcode, 1, 200)) {
+      const check = await publicClient.rpc("is_teacher", { passcode });
+      fromTeacher = !check.error && check.data === true;
+    }
+
     const { data, error } = await admin.from("messages").insert({
       room,
       name: sender,
+      from_teacher: fromTeacher,
       body: text,
       file_path: path,
       file_name: name,
