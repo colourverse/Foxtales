@@ -547,6 +547,7 @@
       if (!document.hidden) refreshHistory(); // e.g. laptop woke from sleep
     });
     restoreTeacher();
+    $("attachButton").hidden = false; // everyone in the room can share files
     $("messageInput").focus();
   }
 
@@ -767,7 +768,6 @@
   var teacherPasscode = "";
 
   function setTeacherMode(on) {
-    $("attachButton").hidden = !on;
     $("teacherLocked").hidden = on;
     $("teacherUnlocked").hidden = !on;
     $("teacherForm").hidden = true;
@@ -844,7 +844,7 @@
     flashTimer = setTimeout(function () { el.hidden = true; }, duration || 4000);
   }
 
-  // ---------- sending files (teacher) ----------
+  // ---------- sending files (anyone in the room) ----------
 
   $("fileInput").setAttribute("accept", ALLOWED_EXTENSIONS.map(function (e) { return "." + e; }).join(","));
   $("attachButton").addEventListener("click", function () {
@@ -857,24 +857,24 @@
     if (files.length) sendFiles(files);
   });
 
-  // Drag a file onto the chat (teacher mode only).
+  // Drag files onto the chat.
   var conversation = document.querySelector(".conversation");
   var dragDepth = 0;
   function dragHasFiles(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") !== -1; }
   conversation.addEventListener("dragenter", function (e) {
-    if (!teacherPasscode || !dragHasFiles(e)) return;
+    if (!backend || !dragHasFiles(e)) return;
     e.preventDefault();
     dragDepth++;
     conversation.classList.add("dropping");
   });
   conversation.addEventListener("dragover", function (e) {
-    if (teacherPasscode && dragHasFiles(e)) e.preventDefault();
+    if (backend && dragHasFiles(e)) e.preventDefault();
   });
   conversation.addEventListener("dragleave", function () {
     if (dragDepth && --dragDepth === 0) conversation.classList.remove("dropping");
   });
   conversation.addEventListener("drop", function (e) {
-    if (!teacherPasscode || !dragHasFiles(e)) return;
+    if (!backend || !dragHasFiles(e)) return;
     e.preventDefault();
     dragDepth = 0;
     conversation.classList.remove("dropping");
@@ -951,13 +951,13 @@
 
   function uploadOne(file, label, caption) {
     showUpload(label + file.name, 0);
-    return callFilesFunction({ action: "sign", passcode: teacherPasscode, room: room, name: file.name, size: file.size })
+    return callFilesFunction({ action: "sign", room: room, name: file.name, size: file.size })
       .then(function (signed) {
         return putFile(signed.signedUrl, file, label).then(function () { return signed.path; });
       })
       .then(function (path) {
         showUpload(label + file.name, 100, "Posting…");
-        return callFilesFunction({ action: "post", passcode: teacherPasscode, room: room, path: path,
+        return callFilesFunction({ action: "post", room: room, path: path,
           name: file.name, type: file.type || "", body: caption, sender: myName });
       })
       .then(function (result) { return result.message; });

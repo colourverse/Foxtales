@@ -1,12 +1,11 @@
-// Fox Tales "files" Edge Function: teacher-only file sharing.
+// Fox Tales "files" Edge Function: file sharing.
 //
-// Deploy with "Verify JWT" OFF: the site calls this with its publishable key,
-// and every action below checks the teacher passcode itself.
+// Deploy with "Verify JWT" OFF: the site calls this with its publishable key.
 //
-// Actions (POST JSON, all need { passcode, room }):
-//   sign               { name, size }                 -> { path, signedUrl }
-//   post               { path, name, type, body, sender } -> { message }
-//   delete-room-files  {}                              -> { deleted }
+// Actions (POST JSON, all need { room }):
+//   sign               { name, size }                     -> { path, signedUrl }   anyone in the room
+//   post               { path, name, type, body, sender } -> { message }           anyone in the room
+//   delete-room-files  { passcode }                       -> { deleted }           teacher only
 
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
 
@@ -96,15 +95,39 @@ export async function handle(req: Request): Promise<Response> {
   }
 
   const { action, passcode, room } = input;
-  if (!isText(passcode, 1, 200) || !isText(room, 1, 48) || !ROOM_RE.test(room)) {
+  if (!isText(room, 1, 48) || !ROOM_RE.test(room)) {
     return json({ error: "Bad request" }, 400);
   }
 
-  const check = await publicClient.rpc("is_teacher", { passcode });
-  if (check.error) return json({ error: "Couldn't check the passcode" }, 500);
-  if (check.data !== true) return json({ error: "Wrong teacher passcode" }, 403);
-
   const storage = admin.storage.from(BUCKET);
+
+  if (action === "delete-room-files") {
+    // Teacher only.
+    if (!isText(passcode, 1, 200)) return json({ error: "Wrong teacher passcode" }, 403);
+    const check = await publicClient.rpc("is_teacher", { passcode });
+    if (check.error) return json({ error: "Couldn't check the passcode" }, 500);
+    if (check.data !== true) return json({ error: "Wrong teacher passcode" }, 403);
+
+    let deleted = 0;
+    for (let round = 0; round < 50; round++) {
+      const { data, error } = await storage.list(room, { limit: 1000 });
+      if (error) return json({ error: "Couldn't list the room's files", deleted }, 500);
+      const paths = (data ?? []).filter((o) => o.id).map((o) => `${room}/${o.name}`);
+      if (!paths.length) break;
+      const removed = await storage.remove(paths);
+      if (removed.error) return json({ error: "Couldn't delete the room's files", deleted }, 500);
+      deleted += paths.length;
+    }
+    return json({ deleted });
+  }
+
+  if (action !== "sign" && action !== "post") return json({ error: "Unknown action" }, 400);
+
+  // Anyone in a room can share files, but only in rooms that exist (so every file
+  // belongs to a room the teacher can see in Manage rooms, and clear or delete).
+  const found = await admin.from("rooms").select("slug").eq("slug", room).maybeSingle();
+  if (found.error) return json({ error: "Couldn't check the room" }, 500);
+  if (!found.data) return json({ error: "That room doesn't exist" }, 404);
 
   if (action === "sign") {
     const { name, size } = input;
@@ -144,20 +167,6 @@ export async function handle(req: Request): Promise<Response> {
     }).select().single();
     if (error) return json({ error: "Couldn't post the file" }, 500);
     return json({ message: data });
-  }
-
-  if (action === "delete-room-files") {
-    let deleted = 0;
-    for (let round = 0; round < 50; round++) {
-      const { data, error } = await storage.list(room, { limit: 1000 });
-      if (error) return json({ error: "Couldn't list the room's files", deleted }, 500);
-      const paths = (data ?? []).filter((o) => o.id).map((o) => `${room}/${o.name}`);
-      if (!paths.length) break;
-      const removed = await storage.remove(paths);
-      if (removed.error) return json({ error: "Couldn't delete the room's files", deleted }, 500);
-      deleted += paths.length;
-    }
-    return json({ deleted });
   }
 
   return json({ error: "Unknown action" }, 400);
