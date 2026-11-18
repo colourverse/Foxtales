@@ -2,9 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Fox Tales</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦊</text></svg>">
+  <meta name="description" content="A simple chat room for small teaching groups.">
+  <!-- Installable app (PWA) -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#e8641b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Fox Tales">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <link rel="stylesheet" href="style.css?v=dev">
 </head>
 <body>
@@ -19,6 +28,13 @@
 
   <!-- Home: join a room or start one -->
   <main class="screen" id="screenHome" hidden>
+    <div class="rejoin" id="rejoinBox" hidden>
+      <div>
+        <p class="rejoin-hello" id="rejoinHello">Welcome back!</p>
+        <p class="rejoin-sub">Pick up where you left off, or join a different room below.</p>
+      </div>
+      <a class="button primary" id="rejoinButton" href="./">Rejoin</a>
+    </div>
     <div class="home">
       <div class="card">
         <h1>Join a room</h1>
@@ -53,7 +69,24 @@
         </div>
       </div>
     </div>
-    <p class="home-footer"><a href="./?manage">Teachers: manage rooms</a></p>
+    <div class="install" id="installBox" hidden>
+      <img src="icons/icon-192.png" alt="" width="56" height="56">
+      <div class="install-text">
+        <strong>Get the Fox Tales app</strong>
+        <span id="installHowPrompt">Add it to your home screen: it opens straight into Fox Tales, full screen.</span>
+        <span id="installHowIOS" hidden>Tap the <b>Share</b> button
+          <svg class="share-icon" viewBox="0 0 24 24" aria-label="Share" role="img"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 17.5 10H16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          then <b>Add to Home Screen</b>. (You may need to tap <b>More</b> or scroll to find it.)</span>
+      </div>
+      <div class="install-actions">
+        <button type="button" class="primary" id="installButton" hidden>Install</button>
+        <button type="button" class="link-button subtle" id="installDismiss">Not now</button>
+      </div>
+    </div>
+    <p class="home-footer">
+      <a href="./?manage">Teachers: manage rooms</a>
+      <span id="installLinkWrap" hidden> · <button type="button" class="link-button subtle" id="installLink">Install the app</button></span>
+    </p>
   </main>
 
   <!-- Teacher: manage rooms -->
