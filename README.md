@@ -46,6 +46,22 @@ in the same browser, which is handy for trying it out locally:
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
+## Installing it as an app (PWA)
+
+Fox Tales can be added to a phone's home screen and opens full screen, like an app. Nothing needs installing
+from an app store.
+
+- **iPhone / iPad (Safari):** Share button → **Add to Home Screen**. The home page shows this tip on iPhones.
+- **Android (Chrome) and desktop Chrome/Edge:** an **Install** button appears on the home page
+  (or use the browser menu → *Install app* / *Add to Home screen*).
+
+Opening the app shows a **Rejoin** button for the last room used. With no internet it shows a
+friendly "You're offline" page. The app keeps no copies of the site, so updates still arrive straight away.
+On iPhones, the installed app keeps its own saved name and teacher passcode, separate from Safari.
+
+Files: `manifest.json` (name, colours, icons), `sw.js` (offline page only), `offline.html`, and `icons/`.
+The icons are a placeholder fox; to change them, replace the PNGs in `icons/` with the same sizes.
+
 ## Automatic deploys
 
 `.github/workflows/deploy.yml` uploads the site to the web host over FTPS every time `main` changes,

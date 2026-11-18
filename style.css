@@ -70,6 +70,26 @@ a.button { display: block; text-align: center; text-decoration: none; }
 .room-meta { font-size: 14px; color: var(--muted); }
 .room-list-status { color: var(--muted); }
 button.danger.small { display: inline-block; width: auto; margin: 0; padding: 6px 14px; font-size: 15px; flex-shrink: 0; }
+/* Rejoin and install cards on the home page */
+.rejoin, .install {
+  width: 100%; max-width: 960px; display: flex; align-items: center; gap: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 22px; box-shadow: 0 4px 18px rgba(80, 40, 10, 0.06);
+}
+.rejoin { margin-bottom: 24px; border: 2px solid var(--brand); justify-content: space-between; flex-wrap: wrap; }
+.rejoin p { margin: 0; }
+.rejoin-hello { font-size: 22px; font-weight: 700; }
+.rejoin-sub { color: var(--muted); font-size: 16px; }
+.rejoin .button { padding: 14px 22px; font-size: 18px; }
+.install { margin-top: 24px; }
+.install img { border-radius: 13px; flex-shrink: 0; }
+.install-text { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 16px; color: var(--muted); }
+.install-text strong { color: var(--text); font-size: 18px; }
+.install-actions { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+.install-actions button.primary { padding: 10px 22px; }
+.share-icon { width: 18px; height: 18px; vertical-align: -3px; color: #0a84ff; }
+.home-footer .link-button { font-size: 15px; vertical-align: baseline; }
+
 .existed { background: var(--brand-soft); color: var(--brand-dark) !important; padding: 8px 12px; border-radius: 8px; }
 button.primary.secondary { background: #fff; color: var(--brand-dark); border: 2px solid var(--brand); }
 button.primary.secondary:hover { background: var(--brand-soft); }
@@ -242,4 +262,27 @@ button.danger:disabled { opacity: .5; }
   .messages { padding: 14px 16px; }
   .composer { padding: 10px 16px 12px; }
   .topbar { padding: 8px 16px; }
+}
+
+/* Phones with notches and home bars, especially when Fox Tales is installed as an app
+   (the orange bar runs up behind the status bar). These only add space where a phone needs it. */
+.topbar {
+  padding-top: calc(10px + env(safe-area-inset-top));
+  padding-left: calc(20px + env(safe-area-inset-left));
+  padding-right: calc(20px + env(safe-area-inset-right));
+}
+.composer { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.screen:not(.chat) { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+@media (max-width: 700px) {
+  .topbar {
+    padding-top: calc(8px + env(safe-area-inset-top));
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
+  }
+  .composer { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .screen:not(.chat) { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+  .rejoin { padding: 16px; }
+  .rejoin .button { width: 100%; }
+  .install { flex-wrap: wrap; padding: 16px; }
+  .install-actions { flex-direction: row; width: 100%; justify-content: flex-end; }
 }

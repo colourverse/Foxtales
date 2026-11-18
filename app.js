@@ -398,8 +398,21 @@
     ["screenHome", "screenNotFound", "screenName", "screenChat", "screenManage"].forEach(function (s) { $(s).hidden = s !== id; });
   }
 
+  function lastRoom() {
+    try { var r = JSON.parse(store("foxtales-last-room") || "null"); return r && r.slug ? r : null; } catch (e) { return null; }
+  }
+
   function setUpHomeScreen() {
     show("screenHome");
+    var last = lastRoom();
+    if (last) {
+      var savedName = store("foxtales-name");
+      $("rejoinHello").textContent = savedName ? "Welcome back, " + savedName + "!" : "Welcome back!";
+      $("rejoinButton").textContent = "Rejoin " + (last.title || prettyRoom(last.slug)) + " →";
+      $("rejoinButton").href = roomLink(last.slug);
+      $("rejoinBox").hidden = false;
+    }
+    updateInstallBox(false);
     var siteAddress = window.location.host + window.location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
     document.querySelectorAll(".site-address").forEach(function (el) { el.textContent = siteAddress; });
     $("joinNameInput").value = store("foxtales-name") || "";
@@ -472,6 +485,8 @@
 
   function showNotFound(slug, typed) {
     show("screenNotFound");
+    var last = lastRoom();
+    if (last && last.slug === slug) store("foxtales-last-room", null);
     $("notFoundName").textContent = typed || prettyRoom(slug);
     $("notFoundRetry").href = "./#join=" + encodeURIComponent(typed || prettyRoom(slug));
     $("notFoundRetry").onclick = function (e) {
@@ -1116,6 +1131,56 @@
     return li;
   }
 
+  // ---------- install as an app (PWA) ----------
+
+  var isStandalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+    window.navigator.standalone === true;
+  // iPads report themselves as Macs, but Macs don't have touch screens.
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var installPrompt = null;
+
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+  }
+
+  // Chrome, Edge and Android offer their own install prompt; keep it for our Install button.
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();
+    installPrompt = e;
+    updateInstallBox(false);
+  });
+  window.addEventListener("appinstalled", function () {
+    installPrompt = null;
+    $("installBox").hidden = true;
+    $("installLinkWrap").hidden = true;
+  });
+
+  function updateInstallBox(force) {
+    var canInstall = !isStandalone && (!!installPrompt || isIOS);
+    $("installLinkWrap").hidden = !canInstall;
+    $("installButton").hidden = !installPrompt;
+    $("installHowPrompt").hidden = !installPrompt;
+    $("installHowIOS").hidden = !!installPrompt || !isIOS;
+    $("installBox").hidden = !canInstall || (!force && store("foxtales-install-dismissed") === "1");
+  }
+
+  $("installButton").addEventListener("click", function () {
+    if (!installPrompt) return;
+    var prompt = installPrompt;
+    installPrompt = null;
+    prompt.prompt();
+    prompt.userChoice.then(function () { updateInstallBox(false); }, function () {});
+  });
+  $("installDismiss").addEventListener("click", function () {
+    store("foxtales-install-dismissed", "1");
+    $("installBox").hidden = true;
+  });
+  $("installLink").addEventListener("click", function () {
+    updateInstallBox(true);
+    $("installBox").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
   // ---------- start ----------
 
   if (!room && params.has("manage")) {
@@ -1126,6 +1191,7 @@
     rooms.find(room).then(function (found) {
       if (!found) { showNotFound(room, prettyRoom(room)); return; }
       if (found.title) roomTitle = found.title;
+      store("foxtales-last-room", JSON.stringify({ slug: room, title: roomTitle }));
       document.title = roomTitle + " · " + (config.appName || "Fox Tales");
       $("roomLabel").textContent = roomTitle;
       $("roomLabel").hidden = false;

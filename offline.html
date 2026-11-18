@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e8641b">
+  <title>Fox Tales · Offline</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #faf7f4; color: #2a211c; display: flex; align-items: center; justify-content: center;
+      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); box-sizing: border-box; text-align: center;
+    }
+    .card { max-width: 360px; }
+    img { width: 96px; height: 96px; border-radius: 22px; }
+    h1 { font-size: 26px; margin: 18px 0 8px; }
+    p { font-size: 18px; color: #74675f; margin: 0 0 22px; line-height: 1.45; }
+    button {
+      font: inherit; font-size: 18px; font-weight: 700; color: #fff; background: #e8641b;
+      border: 0; border-radius: 10px; padding: 12px 26px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="icons/icon-192.png" alt="">
+    <h1>You're offline</h1>
+    <p>Fox Tales needs the internet to show your messages. Check your Wi-Fi or mobile data, then try again.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </div>
+</body>
+</html>
